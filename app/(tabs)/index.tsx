@@ -1,98 +1,146 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useRef, useState, useCallback } from 'react'
+import { View, Text, TouchableOpacity } from 'react-native'
+import { ScrollView } from 'react-native-gesture-handler'
+import { Ionicons } from '@expo/vector-icons'
+import { BottomSheetModal } from '@gorhom/bottom-sheet'
+import { COLORS } from '@/constants/theme'
+import { DonutChart } from '@/components/DonutChart'
+import { FilterBar } from '@/components/FilterBar'
+import { TransactionCard } from '@/components/ui/TransactionCard'
+import { Transaction } from '@/types'
+import { TransactionFormSheet } from '@/components/TransactionFormSheet'
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
-
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
-
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
+// MOCKS para UI
+const CATEGORY_MAP: Record<number, { name: string; icon: any }> = {
+  1: { name: 'Comida', icon: 'fast-food-outline' },
+  2: { name: 'Servicios', icon: 'flash-outline' },
+  3: { name: 'Trabajo', icon: 'briefcase-outline' },
 }
 
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+const MOCK_GROUPED_TRANSACTIONS = [
+  {
+    title: 'Hoy, 10 de Junio',
+    data: [
+      {
+        id: 1,
+        amount: 45000,
+        type: 'expense',
+        categoryId: 1,
+        paymentMethod: 'efectivo',
+        description: 'Almuerzo corriente en el restaurante de la esquina con los compañeros.',
+        date: '2026-06-10T13:30:00.000Z',
+      } as Transaction,
+      {
+        id: 2,
+        amount: 2500000,
+        type: 'income',
+        categoryId: 3,
+        paymentMethod: 'banco',
+        description: 'Pago quincena adelantado',
+        date: '2026-06-10T09:00:00.000Z',
+      } as Transaction,
+    ]
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
+  {
+    title: 'Ayer, 9 de Junio',
+    data: [
+      {
+        id: 3,
+        amount: 120000,
+        type: 'expense',
+        categoryId: 2,
+        paymentMethod: 'banco',
+        description: 'Pago factura del internet y telefonía móvil de este mes, incluye recargos adicionales que pusieron por error y toca reclamar.',
+        date: '2026-06-09T18:45:00.000Z',
+      } as Transaction,
+    ]
+  }
+]
+
+export default function HomeScreen() {
+  const bottomSheetRef = useRef<BottomSheetModal>(null)
+  const [isActionLocked, setIsActionLocked] = useState(false)
+
+  const [mockIncome] = useState(2500000)
+  const [mockExpenses] = useState(165000)
+
+  const handleOpenDrag = useCallback(() => {
+    if (isActionLocked) return
+    setIsActionLocked(true)
+
+    // Abre el Bottom Sheet usando requestAnimationFrame para no ahogar el hilo
+    requestAnimationFrame(() => {
+      bottomSheetRef.current?.present()
+    })
+    
+    setTimeout(() => setIsActionLocked(false), 300)
+  }, [isActionLocked])
+
+  return (
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+
+        {/* Grafico y Resumen */}
+        <DonutChart income={mockIncome} expenses={mockExpenses} />
+
+        {/* Barra de filtros */}
+        <FilterBar />
+
+        {/* LISTA DE CARDS */}
+        <View style={{ paddingHorizontal: 15, marginTop: 10 }}>
+          {MOCK_GROUPED_TRANSACTIONS.map((group, groupIndex) => (
+            <View key={groupIndex} style={{ marginBottom: 20 }}>
+              <Text style={{ 
+                color: COLORS.textMuted, fontSize: 14, fontWeight: '600', marginBottom: 12, marginLeft: 4
+              }}>
+                {group.title}
+              </Text>
+
+              {group.data.map((transaction) => {
+                const category = CATEGORY_MAP[transaction.categoryId];
+                return (
+                  <TransactionCard
+                    key={transaction.id}
+                    transaction={transaction}
+                    categoryName={category.name}
+                    categoryIcon={category.icon}
+                    onLongPress={() => {
+                      console.log('Dejó presionada la card (Inicio de tu lógica):', transaction.id)
+                    }}
+                  />
+                );
+              })}
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+
+      {/* Floating Action Button */}
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={handleOpenDrag}
+        disabled={isActionLocked}
+        style={{
+          position: 'absolute', bottom: 15, right: 15,
+          backgroundColor: COLORS.primary, width: 64, height: 64,
+          borderRadius: 32, alignItems: 'center', justifyContent: 'center',
+          elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3, shadowRadius: 4,
+          opacity: isActionLocked ? 0.7 : 1
+        }}
+      >
+        <Ionicons name="add" size={32} color={COLORS.text} />
+      </TouchableOpacity>
+
+      {/* Formulario Drag */}
+      <TransactionFormSheet 
+        ref={bottomSheetRef}
+        onClose={() => bottomSheetRef.current?.dismiss()}
+        onSave={(data) => {
+          console.log('NUEVO REGISTRO GUARDADO:', data)
+          bottomSheetRef.current?.dismiss()
+        }}
+      />      
+    </View>
+  )
+}
