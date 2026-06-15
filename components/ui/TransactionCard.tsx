@@ -1,40 +1,36 @@
 import React from "react"
-import { View, Text, TouchableOpacity } from 'react-native'
+import { View, Text } from 'react-native'
+import { TouchableOpacity } from 'react-native-gesture-handler'
 import { Ionicons } from "@expo/vector-icons"
 import { COLORS } from "@/constants/theme"
-import { Transaction } from "@/types"
+import { DBTransactionRow } from "@/types"
 
 interface TransactionCardProps {
-  transaction: Transaction
-  categoryName: string
-  categoryIcon: keyof typeof Ionicons.glyphMap
+  transaction: DBTransactionRow
   onLongPress?: () => void
 }
 
-export const TransactionCard = ({
-  transaction,
-  categoryName,
-  categoryIcon,
-  onLongPress
-}: TransactionCardProps) => {
+export const TransactionCard = ({ transaction, onLongPress }: TransactionCardProps) => {
   const isIncome = transaction.type === 'income'
   const typeText = isIncome ? 'Ingreso' : 'Gasto'
   const typeColor = isIncome ? COLORS.primary : COLORS.danger
 
   // Icono del metodo de pago
-  const methodIcon = transaction.paymentMethod === 'efectivo' ? 'cash-outline' : 'card-outline'
+  const methodIcon = transaction.paymentMethodIcon as keyof typeof Ionicons.glyphMap
+  const categoryIcon = transaction.categoryIcon as keyof typeof Ionicons.glyphMap
 
   // Formato de fecha <-- luego pasar a  un utility
   const dateObj = new Date(transaction.date)
-  const formattedDate = dateObj.toLocaleDateString('es-CO', {
-    day: 'numeric',
-    month: 'short',
+  const formattedDate = dateObj.toLocaleDateString('es-CO', { 
+    day: 'numeric', 
+    month: 'short' 
   })
 
   return (
     <TouchableOpacity
       activeOpacity={0.7}
       onLongPress={onLongPress}
+      delayLongPress={250}
       style={{
         backgroundColor: COLORS.surface,
         padding: 16,
@@ -97,7 +93,7 @@ export const TransactionCard = ({
         }}>
           <Ionicons name={categoryIcon} size={14} color={COLORS.textMuted} />
           <Text style={{ color: COLORS.textMuted, fontSize: 12, marginLeft: 4, fontWeight: '600' }}>
-            {categoryName}
+            {transaction.categoryName}
           </Text>
         </View>
       </View>

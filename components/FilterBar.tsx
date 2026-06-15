@@ -2,13 +2,12 @@ import React, { useState } from 'react'
 import { View, Text, TouchableOpacity } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { COLORS } from '@/constants/theme'
+import { useFilterStore } from '@/store/useFilterStore'
 
 export const FilterBar = () => {
   const [isExpanded, setIsExpanded] = useState(false)
-  const [activeType, setActiveType] = useState<'all' | 'income' | 'expense'>('all')
-  const [activeTime, setActiveTime] = useState<'day' | 'month' | 'year'>('month')
-  const [activeMethod, setActiveMethod] = useState<'all' | 'cash' | 'bank'>('all')
-
+  const { activeType, activeTime, activeMethod, setType, setTime, setMethod } = useFilterStore()
+  
   return (
     <View style={{ marginHorizontal: 15, marginBottom: 15 }}>
       {/* Botón Toggle */}
@@ -28,21 +27,23 @@ export const FilterBar = () => {
           
           {/* Fila 1: Ingreso / Gasto */}
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <FilterButton label="Ingresos" active={activeType === 'income'} activeColor={COLORS.primary} onPress={() => setActiveType('income')} />
-            <FilterButton label="Gastos" active={activeType === 'expense'} activeColor={COLORS.danger} onPress={() => setActiveType('expense')} />
+            <FilterButton icon="apps-outline" active={activeType === 'all'} onPress={() => setType('all')} />
+            <FilterButton label="Ingresos" active={activeType === 'income'} activeColor={COLORS.primary} onPress={() => setType('income')} />
+            <FilterButton label="Gastos" active={activeType === 'expense'} activeColor={COLORS.danger} onPress={() => setType('expense')} />
           </View>
 
           {/* Fila 2: Tiempo */}
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <FilterButton label="Día" active={activeTime === 'day'} onPress={() => setActiveTime('day')} />
-            <FilterButton label="Mes" active={activeTime === 'month'} onPress={() => setActiveTime('month')} />
-            <FilterButton label="Año" active={activeTime === 'year'} onPress={() => setActiveTime('year')} />
+            <FilterButton label="Día" active={activeTime === 'day'} onPress={() => setTime('day')} />
+            <FilterButton label="Mes" active={activeTime === 'month'} onPress={() => setTime('month')} />
+            <FilterButton label="Año" active={activeTime === 'year'} onPress={() => setTime('year')} />
           </View>
 
           {/* Fila 3: Método */}
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <FilterButton label="Efectivo" active={activeMethod === 'cash'} onPress={() => setActiveMethod('cash')} />
-            <FilterButton label="Banco" active={activeMethod === 'bank'} onPress={() => setActiveMethod('bank')} />
+            <FilterButton icon="apps-outline" active={activeMethod === 'all'} onPress={() => setMethod('all')} />
+            <FilterButton label="Efectivo" active={activeMethod === 'cash'} onPress={() => setMethod('cash')} />
+            <FilterButton label="Banco" active={activeMethod === 'bank'} onPress={() => setMethod('bank')} />
           </View>
 
         </View>
@@ -52,19 +53,25 @@ export const FilterBar = () => {
 }
 
 // Sub-componente interno para botones de filtro
-const FilterButton = ({ label, active, activeColor = COLORS.surfaceLight, onPress }: any) => (
+const FilterButton = ({ label, icon, active, activeColor = COLORS.surfaceLight, onPress }: any) => (
   <TouchableOpacity
     onPress={onPress}
     style={{
-      flex: 1,
+      flex: icon ? 0.25 : 1,
       paddingVertical: 10,
       alignItems: 'center',
+      justifyContent: 'center',
       borderRadius: 8,
       backgroundColor: active ? (activeColor === COLORS.surfaceLight ? COLORS.border : activeColor) : COLORS.surfaceLight,
       borderWidth: 1,
       borderColor: active ? 'transparent' : COLORS.border,
+      minHeight: 42
     }}
   >
-    <Text style={{ color: active ? COLORS.text : COLORS.textMuted, fontWeight: '600' }}>{label}</Text>
+    {icon ? (
+      <Ionicons name={icon} size={18} color={active ? COLORS.text : COLORS.textMuted} />
+    ) : (
+      <Text style={{ color: active ? COLORS.text : COLORS.textMuted, fontWeight: '600' }}>{label}</Text>
+    )}
   </TouchableOpacity>
 )

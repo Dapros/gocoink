@@ -1,6 +1,5 @@
 import React from 'react'
-import { View, Text, TextInputProps } from 'react-native'
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet'
+import { View, Text, TextInput, TextInputProps } from 'react-native'
 import { COLORS } from '@/constants/theme'
 
 interface InputProps extends TextInputProps {
@@ -16,7 +15,7 @@ export const Input = ({ label, error, ...props }: InputProps) => {
           {label}
         </Text>
       )}
-      <BottomSheetTextInput 
+      <TextInput 
         placeholderTextColor={COLORS.textMuted}
         style={{
           backgroundColor: COLORS.surfaceLight,
