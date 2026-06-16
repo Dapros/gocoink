@@ -16,7 +16,7 @@ interface FilterState {
 
 export const useFilterStore = create<FilterState>((set) => ({
   activeType: 'all',
-  activeTime: 'month', // Por defecto se muestra el mes
+  activeTime: 'day', // Por defecto se muestra el mes
   activeMethod: 'all',
   
   setType: (activeType) => set({ activeType }),

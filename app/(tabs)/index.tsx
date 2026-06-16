@@ -72,7 +72,10 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
 
         {/* Grafico y Resumen */}
-        <DonutChart income={totalBudget} expenses={totalExpenses} />
+        <DonutChart 
+          income={totalBudget} 
+          expenses={totalExpenses} 
+        />
 
         {/* Barra de filtros */}
         <FilterBar />
