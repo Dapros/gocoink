@@ -2,7 +2,7 @@ import 'react-native-gesture-handler'
 import React from 'react'
 import { Stack } from 'expo-router'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
-import { TouchableOpacity } from 'react-native'
+import { TouchableOpacity, Image } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { COLORS } from '@/constants/theme'
 
@@ -22,7 +22,15 @@ export default function RootLayout() {
           options={{ 
             title: 'GoCoink',
             headerLeft: () => (
-              <Ionicons name="wallet" size={28} color={COLORS.primary} style={{ marginRight: 10 }} />   
+              <Image 
+                source={require('./../assets/images/GoCoink.avif')} 
+                resizeMode='contain'
+                style={{ 
+                  marginRight: 10,
+                  width: 32,
+                  height: 32,
+                }} 
+              /> 
             ),
             headerRight: () => (
               <TouchableOpacity

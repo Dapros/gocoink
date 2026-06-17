@@ -4,7 +4,7 @@
     "slug": "frontend-gocoink",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/GoCoink.avif",
     "scheme": "frontendgocoink",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,

@@ -12,8 +12,11 @@ import { useFilterStore } from '@/store/useFilterStore'
 import { DatabaseService } from '@/services/database'
 import { processTransactions } from '@/utils/dateHelpers'
 import { useSettingsStore } from '@/store/useSettingsStore'
+import { useRouter } from 'expo-router'
+import { SwipeWrapper } from '@/components/SwiperWrapper'
 
 export default function HomeScreen() {
+  const router = useRouter()
   // estados para sheet, modal dragg
   const { openCreate, openDetails, refreshKey, loadCatalogs } = useSheetStore()
   // estados de los filtros
@@ -68,87 +71,91 @@ export default function HomeScreen() {
   }, [rawTransactions, activeType, activeTime, activeMethod, baseSalary])
 
   return (
-    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+    <SwipeWrapper
+      onSwipeLeft={() => router.navigate('/plan')}
+    >
+      <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
 
-        {/* Grafico y Resumen */}
-        <DonutChart 
-          income={totalBudget} 
-          expenses={totalExpenses} 
-        />
+          {/* Grafico y Resumen */}
+          <DonutChart 
+            income={totalBudget} 
+            expenses={totalExpenses} 
+          />
 
-        {/* Barra de filtros */}
-        <FilterBar />
+          {/* Barra de filtros */}
+          <FilterBar />
 
-        {/* LISTA DE CARDS */}
-        <View style={{ paddingHorizontal: 15, marginTop: 10 }}>
-          {groupedTransactions.map((group) => (
-            <View key={group.dateKey} style={{ marginBottom: 24 }}>
-              
-              {/* HEADER PERSONALIZADO DE LA FECHA */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, marginLeft: 4, flexWrap: 'wrap', gap: 8 }}>
+          {/* LISTA DE CARDS */}
+          <View style={{ paddingHorizontal: 15, marginTop: 10 }}>
+            {groupedTransactions.map((group) => (
+              <View key={group.dateKey} style={{ marginBottom: 24 }}>
                 
-                {/* 1. Fecha completa */}
-                <Text style={{ color: COLORS.textMuted, fontSize: 14, fontWeight: '600', textTransform: 'capitalize' }}>
-                  {group.dateFormatted}
-                </Text>
-
-                {/* 2. Etiqueta (Pill) del día de la semana */}
-                <View style={{ 
-                  borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, 
-                  paddingHorizontal: 8, paddingVertical: 2 
-                }}>
-                  <Text style={{ color: COLORS.textMuted, fontSize: 10, textTransform: 'uppercase', fontWeight: 'bold' }}>
-                    {group.dayOfWeek}
+                {/* HEADER PERSONALIZADO DE LA FECHA */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, marginLeft: 4, flexWrap: 'wrap', gap: 8 }}>
+                  
+                  {/* 1. Fecha completa */}
+                  <Text style={{ color: COLORS.textMuted, fontSize: 14, fontWeight: '600', textTransform: 'capitalize' }}>
+                    {group.dateFormatted}
                   </Text>
-                </View>
 
-                {/* 3. Etiqueta (Pill) extra si es HOY */}
-                {group.isToday && (
+                  {/* 2. Etiqueta (Pill) del día de la semana */}
                   <View style={{ 
-                    borderWidth: 1, borderColor: COLORS.primary, borderRadius: 12, 
-                    paddingHorizontal: 8, paddingVertical: 2, backgroundColor: COLORS.surfaceLight 
+                    borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, 
+                    paddingHorizontal: 8, paddingVertical: 2 
                   }}>
-                    <Text style={{ color: COLORS.primary, fontSize: 10, textTransform: 'uppercase', fontWeight: 'bold' }}>
-                      HOY
+                    <Text style={{ color: COLORS.textMuted, fontSize: 10, textTransform: 'uppercase', fontWeight: 'bold' }}>
+                      {group.dayOfWeek}
                     </Text>
                   </View>
-                )}
+
+                  {/* 3. Etiqueta (Pill) extra si es HOY */}
+                  {group.isToday && (
+                    <View style={{ 
+                      borderWidth: 1, borderColor: COLORS.primary, borderRadius: 12, 
+                      paddingHorizontal: 8, paddingVertical: 2, backgroundColor: COLORS.surfaceLight 
+                    }}>
+                      <Text style={{ color: COLORS.primary, fontSize: 10, textTransform: 'uppercase', fontWeight: 'bold' }}>
+                        HOY
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* RENDER DE CARDS */}
+                {group.data.map((row) => (
+                  <TransactionCard
+                    key={row.id}
+                    transaction={row}
+                    onLongPress={() => openDetails(row)}
+                  />
+                ))}
               </View>
+            ))}
 
-              {/* RENDER DE CARDS */}
-              {group.data.map((row) => (
-                <TransactionCard
-                  key={row.id}
-                  transaction={row}
-                  onLongPress={() => openDetails(row)}
-                />
-              ))}
-            </View>
-          ))}
+            {groupedTransactions.length === 0 && (
+              <Text style={{ color: COLORS.textMuted, textAlign: 'center', marginTop: 30 }}>
+                No hay movimientos registrados.
+              </Text>
+            )}
+          </View>
+        </ScrollView>
 
-          {groupedTransactions.length === 0 && (
-            <Text style={{ color: COLORS.textMuted, textAlign: 'center', marginTop: 30 }}>
-              No hay movimientos registrados.
-            </Text>
-          )}
-        </View>
-      </ScrollView>
-
-      {/* Floating Action Button */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={openCreate}
-        style={{
-          position: 'absolute', bottom: 15, right: 15,
-          backgroundColor: COLORS.primary, width: 64, height: 64,
-          borderRadius: 32, alignItems: 'center', justifyContent: 'center',
-          elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3, shadowRadius: 4
-        }}
-      >
-        <Ionicons name="add" size={32} color={COLORS.text} />
-      </TouchableOpacity>
-    </View>
+        {/* Floating Action Button */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={openCreate}
+          style={{
+            position: 'absolute', bottom: 15, right: 15,
+            backgroundColor: COLORS.primary, width: 64, height: 64,
+            borderRadius: 32, alignItems: 'center', justifyContent: 'center',
+            elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3, shadowRadius: 4
+          }}
+        >
+          <Ionicons name="add" size={32} color={COLORS.text} />
+        </TouchableOpacity>
+      </View>
+    </SwipeWrapper>
   )
 }

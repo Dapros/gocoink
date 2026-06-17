@@ -1,73 +1,80 @@
-import React from 'react'
-import { View, Text } from 'react-native'
-import { PolarChart, Pie } from 'victory-native'
+import React, { useEffect, useRef } from 'react'
+import { View, Text, Animated } from 'react-native'
+import Svg, { Circle } from 'react-native-svg'
 import { COLORS } from '@/constants/theme'
 
 interface DonutChartProps {
-  income: number
-  expenses: number
+  income: number | string 
+  expenses: number | string
 }
 
-type ChartData = {
-  value: number
-  color: string
-}
+// de SVG normal a un componente capaz de recibir animacion
+const AnimatedCircle = Animated.createAnimatedComponent(Circle)
 
 export const DonutChart = ({ income, expenses }: DonutChartProps) => {
-  const remaining = income - expenses
+  const safeIncome = Number(income) || 0
+  const safeExpenses = Number(expenses) || 0
+  const remaining = safeIncome - safeExpenses
+  
+  // Cálculo exacto del porcentaje
+  const spentPercentage = safeIncome > 0 ? (safeExpenses / safeIncome) * 100 : (safeExpenses > 0 ? 100 : 0)
 
-  // Porcentaje de gasto
-  let spentPercentage = 0
-  if (income > 0) {
-    spentPercentage = (expenses / income) * 100
-  } else if (expenses > 0) {
-    spentPercentage = 100
-  }
-
-  // Colores dinamicos
+  // Lógica dinámica de colores
   const getDynamicColor = () => {
-    if (spentPercentage < 65) return COLORS.primary
-    if (spentPercentage < 90) return '#F59E0B'
-    return COLORS.danger
+    if (spentPercentage < 50) return COLORS.primary // Hasta 49% = Verde
+    if (spentPercentage < 80) return '#F59E0B' // 50% a 79% = Amarillo
+    return COLORS.danger// 80% o más = Rojo
   }
 
   const activeColor = getDynamicColor()
 
-  const pieData: ChartData[] = (() => {
-    if (income === 0 && expenses === 0) {
-      return [{ value: 1, color: COLORS.surfaceLight }]
-    } 
-    if (expenses >= income) {
-      return [{ value: 1, color: activeColor }]
-    } 
-    if (expenses === 0) {
-      return [{ value: 1, color: COLORS.surfaceLight }]
-    } 
-    
-    return [
-      { value: expenses, color: activeColor },
-      { value: remaining > 0 ? remaining : 0, color: COLORS.surfaceLight }
-    ]
-  })()
+  const size = 220
+  const strokeWidth = 25
+  const radius = (size - strokeWidth) / 2
+  const circumference = radius * 2 * Math.PI
+
+  const visualPercentage = Math.min(spentPercentage, 100)
+
+  const targetDashoffset = circumference - (visualPercentage / 100) * circumference
+  const animatedOffset = useRef(new Animated.Value(circumference)).current
+
+  useEffect(() => {
+    Animated.timing(animatedOffset, {
+      toValue: targetDashoffset,
+      duration: 800, 
+      useNativeDriver: false, 
+    }).start()
+  }, [targetDashoffset])
 
   return (
     <View style={{ alignItems: 'center', marginVertical: 15 }}>
-      
-      {/* Contenedor con tamaño fijo para alinear perfectamente Skia y el Texto */}
-      <View style={{ width: 220, height: 220, justifyContent: 'center', alignItems: 'center' }}>
-        
-        {/* EL MOTOR GRÁFICO SKIA */}
-        <PolarChart
-          data={pieData}
-          colorKey={"color" as keyof ChartData}
-          valueKey={"value" as keyof ChartData}
-        >
-          <Pie.Chart 
-            innerRadius={85} 
+      <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
+        <Svg width={size} height={size} style={{ position: 'absolute', transform: [{ rotate: '180deg' }] }}>
+          {/* Círculo de fondo */}
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={COLORS.surfaceLight}
+            strokeWidth={strokeWidth}
+            fill="none"
           />
-        </PolarChart>
+          
+          {/* Círculo Animado */}
+          <AnimatedCircle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={activeColor}
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeDasharray={circumference}
+            strokeDashoffset={animatedOffset} 
+            strokeLinecap="round"
+          />
+        </Svg>
 
-        <View style={{ position: 'absolute', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+        <View style={{ position: 'absolute', alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontSize: 14, color: COLORS.textMuted }}>has gastado</Text>
           <Text style={{ fontSize: 36, color: COLORS.text, fontWeight: 'bold', marginVertical: 4 }}>
             {spentPercentage.toFixed(0)}%
@@ -85,7 +92,6 @@ export const DonutChart = ({ income, expenses }: DonutChartProps) => {
           </Text>
         </Text>
       </View>
-
     </View>
   )
 }

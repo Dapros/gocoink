@@ -1,4 +1,6 @@
 import { create } from "zustand"
+import { persist, createJSONStorage } from 'zustand/middleware'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 export type FilterType = 'all' | 'income' | 'expense'
 export type FilterTime = 'day' | 'month' | 'year'
@@ -14,12 +16,20 @@ interface FilterState {
   setMethod: (method: FilterMethod) => void
 }
 
-export const useFilterStore = create<FilterState>((set) => ({
-  activeType: 'all',
-  activeTime: 'day', // Por defecto se muestra el mes
-  activeMethod: 'all',
-  
-  setType: (activeType) => set({ activeType }),
-  setTime: (activeTime) => set({ activeTime }),
-  setMethod: (activeMethod) => set({ activeMethod }),
-}))
+export const useFilterStore = create<FilterState>()(
+  persist(
+    (set) => ({
+      activeType: 'all',
+      activeTime: 'day',
+      activeMethod: 'all',
+      
+      setType: (activeType) => set({ activeType }),
+      setTime: (activeTime) => set({ activeTime }),
+      setMethod: (activeMethod) => set({ activeMethod }),
+    }),
+    {
+      name: 'filter-storage', // Nombre único en el almacenamiento
+      storage: createJSONStorage(() => AsyncStorage), // Usamos AsyncStorage
+    }
+  )
+)

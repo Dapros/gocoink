@@ -5,10 +5,13 @@ import { COLORS } from "@/constants/theme"
 import { useSettingsStore } from "@/store/useSettingsStore"
 import { Input } from "@/components/ui/Input"
 import { Button } from "@/components/ui/Button"
+import { useRouter } from 'expo-router'
+import { SwipeWrapper } from '@/components/SwiperWrapper'
 
 type PlanType = 'monthly' | 'biweekly' | 'free'
 
 export default function PlanScreen() {
+  const router = useRouter()
   const { cycleMode, baseSalary, cycleStartDate, saveSettings } = useSettingsStore()
 
   const [draftMode, setDraftMode] = useState<PlanType>('monthly')
@@ -55,103 +58,107 @@ export default function PlanScreen() {
   }
 
   return (
-    <KeyboardAvoidingView 
-      // 'padding' para iOS y 'height' para Android para evitar el desfase con la barra de pestañas
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-      style={{ flex: 1, backgroundColor: COLORS.background }}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+    <SwipeWrapper
+      onSwipeRight={() => router.navigate('/')}
     >
-      <ScrollView 
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 20, paddingBottom: 140 }} 
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView 
+        // 'padding' para iOS y 'height' para Android para evitar el desfase con la barra de pestañas
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+        style={{ flex: 1, backgroundColor: COLORS.background }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
       >
-        
-        <Text style={{ fontSize: 28, fontWeight: 'bold', color: COLORS.text, marginBottom: 20 }}>
-          Mi Plan
-        </Text>
-
-        {/* --- TARJETA DE RESUMEN ACTUAL --- */}
-        <View style={{
-          backgroundColor: COLORS.surface,
-          padding: 20,
-          borderRadius: 20,
-          marginBottom: 30,
-          borderWidth: 1,
-          borderColor: COLORS.border,
-        }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <Ionicons name="wallet" size={24} color={COLORS.primary} style={{ marginRight: 10 }} />
-            <Text style={{ color: COLORS.textMuted, fontSize: 16, fontWeight: '600', textTransform: 'uppercase' }}>
-              Ciclo Actual: {cycleMode ? modeLabels[cycleMode] : 'No definido'}
-            </Text>
-          </View>
+        <ScrollView 
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 20, paddingBottom: 140 }} 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           
-          <Text style={{ color: COLORS.text, fontSize: 36, fontWeight: 'bold', marginBottom: 8 }}>
-            ${baseSalary.toLocaleString('es-CO')}
+          <Text style={{ fontSize: 28, fontWeight: 'bold', color: COLORS.text, marginBottom: 20 }}>
+            Mi Plan
           </Text>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surfaceLight, padding: 10, borderRadius: 10 }}>
-            <Ionicons name="calendar-outline" size={18} color={COLORS.textMuted} style={{ marginRight: 8 }} />
-            <Text style={{ color: COLORS.textMuted, fontSize: 14 }}>
-              Próximo corte: <Text style={{ color: COLORS.text, fontWeight: 'bold' }}>{getNextCutDate()}</Text>
+          {/* --- TARJETA DE RESUMEN ACTUAL --- */}
+          <View style={{
+            backgroundColor: COLORS.surface,
+            padding: 20,
+            borderRadius: 20,
+            marginBottom: 30,
+            borderWidth: 1,
+            borderColor: COLORS.border,
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <Ionicons name="wallet" size={24} color={COLORS.primary} style={{ marginRight: 10 }} />
+              <Text style={{ color: COLORS.textMuted, fontSize: 16, fontWeight: '600', textTransform: 'uppercase' }}>
+                Ciclo Actual: {cycleMode ? modeLabels[cycleMode] : 'No definido'}
+              </Text>
+            </View>
+            
+            <Text style={{ color: COLORS.text, fontSize: 36, fontWeight: 'bold', marginBottom: 8 }}>
+              ${baseSalary.toLocaleString('es-CO')}
             </Text>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surfaceLight, padding: 10, borderRadius: 10 }}>
+              <Ionicons name="calendar-outline" size={18} color={COLORS.textMuted} style={{ marginRight: 8 }} />
+              <Text style={{ color: COLORS.textMuted, fontSize: 14 }}>
+                Próximo corte: <Text style={{ color: COLORS.text, fontWeight: 'bold' }}>{getNextCutDate()}</Text>
+              </Text>
+            </View>
           </View>
-        </View>
 
-        <View style={{ height: 1, backgroundColor: COLORS.border, marginBottom: 30 }} />
+          <View style={{ height: 1, backgroundColor: COLORS.border, marginBottom: 30 }} />
 
-        {/* --- SECCIÓN DE EDICIÓN --- */}
-        <Text style={{ fontSize: 20, fontWeight: 'bold', color: COLORS.text, marginBottom: 16 }}>
-          Modificar Configuración
-        </Text>
+          {/* --- SECCIÓN DE EDICIÓN --- */}
+          <Text style={{ fontSize: 20, fontWeight: 'bold', color: COLORS.text, marginBottom: 16 }}>
+            Modificar Configuración
+          </Text>
 
-        <View style={{ gap: 12, marginBottom: 24 }}>
-          <PlanCard 
-            title="Mensual" 
-            desc="Sueldo fijo una vez al mes." 
-            icon="calendar-outline" 
-            active={draftMode === 'monthly'} 
-            onPress={() => setDraftMode('monthly')} 
-          />
-          <PlanCard 
-            title="Quincenal" 
-            desc="Pago cada 15 días." 
-            icon="calendar-number-outline" 
-            active={draftMode === 'biweekly'} 
-            onPress={() => setDraftMode('biweekly')} 
-          />
-          <PlanCard 
-            title="Libre" 
-            desc="Independiente, sin sueldo fijo." 
-            icon="briefcase-outline" 
-            active={draftMode === 'free'} 
-            onPress={() => setDraftMode('free')} 
-          />
-        </View>
-
-        {draftMode !== 'free' && (
-          <View style={{ marginBottom: 20 }}>
-            <Input 
-              label="Nuevo Sueldo Base (COP)"
-              keyboardType="numeric"
-              value={draftSalary}
-              onChangeText={setDraftSalary}
-              placeholder="Ej: 3000000"
+          <View style={{ gap: 12, marginBottom: 24 }}>
+            <PlanCard 
+              title="Mensual" 
+              desc="Sueldo fijo una vez al mes." 
+              icon="calendar-outline" 
+              active={draftMode === 'monthly'} 
+              onPress={() => setDraftMode('monthly')} 
+            />
+            <PlanCard 
+              title="Quincenal" 
+              desc="Pago cada 15 días." 
+              icon="calendar-number-outline" 
+              active={draftMode === 'biweekly'} 
+              onPress={() => setDraftMode('biweekly')} 
+            />
+            <PlanCard 
+              title="Libre" 
+              desc="Independiente, sin sueldo fijo." 
+              icon="briefcase-outline" 
+              active={draftMode === 'free'} 
+              onPress={() => setDraftMode('free')} 
             />
           </View>
-        )}
 
-        <Button 
-          label="Guardar Cambios" 
-          variant="primary" 
-          onPress={handleSave} 
-          disabled={draftMode !== 'free' && !draftSalary} 
-        />
+          {draftMode !== 'free' && (
+            <View style={{ marginBottom: 20 }}>
+              <Input 
+                label="Nuevo Sueldo Base (COP)"
+                keyboardType="numeric"
+                value={draftSalary}
+                onChangeText={setDraftSalary}
+                placeholder="Ej: 3000000"
+              />
+            </View>
+          )}
 
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <Button 
+            label="Guardar Cambios" 
+            variant="primary" 
+            onPress={handleSave} 
+            disabled={draftMode !== 'free' && !draftSalary} 
+          />
+
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SwipeWrapper>
   )
 }
 
