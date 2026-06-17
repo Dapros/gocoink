@@ -2,7 +2,8 @@ import 'react-native-gesture-handler'
 import React from 'react'
 import { Stack } from 'expo-router'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
-import { TouchableOpacity, Image } from 'react-native'
+import { TouchableOpacity } from 'react-native'
+import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import { COLORS } from '@/constants/theme'
 
@@ -24,7 +25,8 @@ export default function RootLayout() {
             headerLeft: () => (
               <Image 
                 source={require('./../assets/images/GoCoink.avif')} 
-                resizeMode='contain'
+                contentFit="contain" // resizeMode='contain' <-- descontinuado ahora se usa Image de expo
+                transition={500}
                 style={{ 
                   marginRight: 10,
                   width: 32,
@@ -42,7 +44,8 @@ export default function RootLayout() {
             )
           }}
         />
-        {/* <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} /> */ }
+        
+        <Stack.Screen name="+not-found" options={{ title: 'Ups!' }} />
       </Stack>
     </GestureHandlerRootView>
   )
