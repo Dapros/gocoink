@@ -5,20 +5,33 @@ import { DBTransactionRow, UserSettings } from '@/types'
 let dbInstance: SQLite.SQLiteDatabase | null = null
 let dbInitPromise: Promise<SQLite.SQLiteDatabase> | null = null
 
+// Helper interno para calcular la fecha de finalización exacta de un ciclo
+const calculateEndDate = (startDateIso: string, mode: 'monthly' | 'biweekly' | 'free') => {
+  const start = new Date(startDateIso)
+  const end = new Date(start)
+  if (mode === 'monthly') {
+    end.setMonth(end.getMonth() + 1)
+  } else if (mode === 'biweekly') {
+    end.setDate(end.getDate() + 15)
+  } else {
+    end.setMonth(end.getMonth() + 1) // El modo libre, limitado a un mes natural para el reporte
+  }
+  return end.toISOString()
+}
+
 export const DatabaseService = {
   async initialize() {
-    // 1. Si la base de datos ya se inicializó, la devolvemos al instante
+    // Si la base de datos ya se inicializó, la devolvemos al instante
     if (dbInstance) return dbInstance
 
-    // 2. Si otro componente ya la está inicializando (Promesa en curso), esperamos a que termine
+    // Si otro componente ya la está inicializando (Promesa en curso), esperamos a que termine
     if (dbInitPromise) return dbInitPromise
 
-    // 3. Si nadie la ha inicializado, creamos el "Bloqueo por Promesa"
+    // Si nadie la ha inicializado, creamos el "Bloqueo por Promesa"
     dbInitPromise = (async () => {
       try {
         const db = await SQLite.openDatabaseAsync('gocoink_v1.db')
 
-        // Ejecutamos la creación de tablas
         await db.execAsync(`
           PRAGMA foreign_keys = ON;
 
@@ -55,11 +68,33 @@ export const DatabaseService = {
             cycle_start_date TEXT
           );
 
+          /* NUEVA TABLA HISTÓRICA DE CICLOS/CORTES */
+          CREATE TABLE IF NOT EXISTS cycles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            cycle_mode TEXT CHECK(cycle_mode IN ('monthly', 'biweekly', 'free')) NOT NULL,
+            base_salary REAL NOT NULL,
+            start_date TEXT NOT NULL,
+            end_date TEXT NOT NULL
+          );
+
           INSERT OR IGNORE INTO user_settings (id, cycle_mode, base_salary, cycle_start_date) 
           VALUES (1, NULL, 0, NULL);
         `)
 
-        // Insertamos datos por defecto si está vacía
+        // Sincronización inicial: Si la tabla de ciclos está vacía pero el usuario ya tenía configuración
+        const cycleCheck = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM cycles')
+        if (cycleCheck?.count === 0) {
+          const currentSettings = await db.getFirstAsync<any>('SELECT * FROM user_settings WHERE id = 1')
+          if (currentSettings?.cycle_mode) {
+            const calculatedEnd = calculateEndDate(currentSettings.cycle_start_date, currentSettings.cycle_mode)
+            await db.runAsync(
+              'INSERT INTO cycles (cycle_mode, base_salary, start_date, end_date) VALUES (?, ?, ?, ?)',
+              [currentSettings.cycle_mode, currentSettings.base_salary, currentSettings.cycle_start_date, calculatedEnd]
+            )
+          }
+        }
+
+        // Carga de categorías por defecto
         const catCheck = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM categories;')
         if (catCheck?.count === 0) {
           await db.execAsync(`
@@ -73,19 +108,11 @@ export const DatabaseService = {
             ('Bancolombia', 'card-outline'),
             ('Nequi', 'phone-portrait-outline');
           `)
-
-          const ahora = new Date().toISOString()
-          await db.runAsync(
-            'INSERT INTO transactions (amount, type, category_id, payment_method_id, description, date) VALUES (?, ?, ?, ?, ?, ?);',
-            [35000, 'expense', 1, 1, 'Transaccion inicial de prueba SQLite', ahora]
-          )
         }
 
-        // Guardamos la instancia definitiva y limpiamos la promesa
         dbInstance = db
         return db
       } catch (error) {
-        // Si algo falla, limpiamos la promesa para que se pueda volver a intentar
         dbInitPromise = null
         throw error
       }
@@ -98,7 +125,6 @@ export const DatabaseService = {
   async getUserSettings(): Promise<UserSettings> {
     const db = await this.initialize()
     const result = await db.getFirstAsync<any>('SELECT * FROM user_settings WHERE id = 1;')
-    
     return {
       cycleMode: result?.cycle_mode || null,
       baseSalary: result?.base_salary || 0,
@@ -106,8 +132,26 @@ export const DatabaseService = {
     }
   },
 
-  async updateUserSettings(mode: 'monthly' | 'biweekly' | 'free', salary: number, startDate: string): Promise<void> {
+  // Obtener todos los ciclos reales registrados ordenados del más nuevo al más antiguo
+  async getAllCycles() {
     const db = await this.initialize()
+    return await db.getAllAsync<{ id: number; cycleMode: 'monthly' | 'biweekly' | 'free'; baseSalary: number; startDate: string; endDate: string }>(
+      'SELECT id, cycle_mode as cycleMode, base_salary as baseSalary, start_date as startDate, end_date as endDate FROM cycles ORDER BY start_date DESC'
+    )
+  },
+
+  // inserta un nuevo ciclo en el historial y actualiza el estado de la configuración actual
+  async saveNewCycle(mode: 'monthly' | 'biweekly' | 'free', salary: number, startDate: string): Promise<void> {
+    const db = await this.initialize()
+    const endDate = calculateEndDate(startDate, mode)
+    
+    // Guardado en el histórico inmutable
+    await db.runAsync(
+      'INSERT INTO cycles (cycle_mode, base_salary, start_date, end_date) VALUES (?, ?, ?, ?)',
+      [mode, salary, startDate, endDate]
+    )
+
+    // Actualizacion en los ajustes generales de la app
     await db.runAsync(
       'UPDATE user_settings SET cycle_mode = ?, base_salary = ?, cycle_start_date = ? WHERE id = 1;',
       [mode, salary, startDate]
@@ -116,8 +160,7 @@ export const DatabaseService = {
 
   // Obtener todas las transacciones
   async getAllTransactions(): Promise<DBTransactionRow[]> {
-    const db = await this.initialize();
-    
+    const db = await this.initialize()
     return await db.getAllAsync<DBTransactionRow>(`
       SELECT
         t.id, t.amount, t.type, t.description, t.date,
@@ -128,9 +171,9 @@ export const DatabaseService = {
       JOIN categories c ON t.category_id = c.id
       JOIN payment_methods p ON t.payment_method_id = p.id
       ORDER BY t.date DESC;  
-    `);
+    `)
   },
-
+  
   // Insercion de nueva transaccion
   async insertTransaction(
     amount: number,

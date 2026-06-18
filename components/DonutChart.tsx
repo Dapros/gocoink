@@ -8,7 +8,6 @@ interface DonutChartProps {
   expenses: number | string
 }
 
-// de SVG normal a un componente capaz de recibir animacion
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
 
 export const DonutChart = ({ income, expenses }: DonutChartProps) => {
@@ -16,14 +15,12 @@ export const DonutChart = ({ income, expenses }: DonutChartProps) => {
   const safeExpenses = Number(expenses) || 0
   const remaining = safeIncome - safeExpenses
   
-  // Cálculo exacto del porcentaje
   const spentPercentage = safeIncome > 0 ? (safeExpenses / safeIncome) * 100 : (safeExpenses > 0 ? 100 : 0)
 
-  // Lógica dinámica de colores
   const getDynamicColor = () => {
-    if (spentPercentage < 50) return COLORS.primary // Hasta 49% = Verde
-    if (spentPercentage < 80) return '#F59E0B' // 50% a 79% = Amarillo
-    return COLORS.danger// 80% o más = Rojo
+    if (spentPercentage < 50) return COLORS.primary 
+    if (spentPercentage < 80) return '#F59E0B' 
+    return COLORS.danger
   }
 
   const activeColor = getDynamicColor()
@@ -50,7 +47,6 @@ export const DonutChart = ({ income, expenses }: DonutChartProps) => {
     <View style={{ alignItems: 'center', marginVertical: 15 }}>
       <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
         <Svg width={size} height={size} style={{ position: 'absolute', transform: [{ rotate: '180deg' }] }}>
-          {/* Círculo de fondo */}
           <Circle
             cx={size / 2}
             cy={size / 2}
@@ -60,7 +56,6 @@ export const DonutChart = ({ income, expenses }: DonutChartProps) => {
             fill="none"
           />
           
-          {/* Círculo Animado */}
           <AnimatedCircle
             cx={size / 2}
             cy={size / 2}
@@ -86,10 +81,17 @@ export const DonutChart = ({ income, expenses }: DonutChartProps) => {
 
       <View style={{ marginTop: 24, paddingHorizontal: 20 }}>
         <Text style={{ fontSize: 15, color: COLORS.text, textAlign: 'center', lineHeight: 24 }}>
-          De los <Text style={{ color: COLORS.primary, fontWeight: 'bold' }}>${income.toLocaleString('es-CO')}</Text> que ingresaste este mes, te quedan{' '}
+          De los <Text style={{ color: COLORS.primary, fontWeight: 'bold' }}>${safeIncome.toLocaleString('es-CO')}</Text> que ingresaste este mes, te quedan{' '}
           <Text style={{ color: activeColor, fontWeight: 'bold' }}>
             ${remaining.toLocaleString('es-CO')}
           </Text>
+          
+          {/* AVISO DE EXCESO DE GASTOS */}
+          {remaining < 0 && (
+            <Text style={{ color: COLORS.danger, fontWeight: 'bold', textTransform: 'uppercase' }}>
+              {' '} (GASTASTE MÁS DE LO QUE INGRESASTE)
+            </Text>
+          )}
         </Text>
       </View>
     </View>
