@@ -1,13 +1,28 @@
-import React, { useState } from 'react'
-import { View, Text, TouchableOpacity } from 'react-native'
+import React, { useState, useRef, useEffect } from 'react'
+import { View, Text, TouchableOpacity, Animated } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { COLORS } from '@/constants/theme'
 import { useFilterStore } from '@/store/useFilterStore'
+import { Button } from '@/components/ui/Button'
 
 export const FilterBar = () => {
   const [isExpanded, setIsExpanded] = useState(false)
   const { activeType, activeTime, activeMethod, setType, setTime, setMethod } = useFilterStore()
   
+  const rotateAnim = useRef(new Animated.Value(0)).current
+  useEffect(() => {
+    Animated.timing(rotateAnim, {
+      toValue: isExpanded ? 1 : 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start()
+  }, [isExpanded])
+
+  const spin = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg']
+  })
+
   return (
     <View style={{ marginHorizontal: 15, marginBottom: 15 }}>
       {/* Botón Toggle */}
@@ -18,7 +33,9 @@ export const FilterBar = () => {
       >
         <Ionicons name="filter" size={20} color={COLORS.textMuted} />
         <Text style={{ color: COLORS.textMuted, fontSize: 16, marginLeft: 8, flex: 1 }}>Filtros</Text>
-        <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={20} color={COLORS.textMuted} />
+        <Animated.View style={{ transform: [{ rotate: spin }] }}>
+          <Ionicons name="chevron-down" size={20} color={COLORS.textMuted} />
+        </Animated.View>
       </TouchableOpacity>
 
       {/* Panel Expandible */}

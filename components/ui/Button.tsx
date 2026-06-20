@@ -10,10 +10,23 @@ interface ButtonProps {
   isLoading?: boolean
   disabled?: boolean
   icon?: keyof typeof Ionicons.glyphMap
+  iconPos?: 'top' | 'bottom' | 'left' | 'right'
+  iconColor?: string
   style?: StyleProp<ViewStyle>
 }
 
-export const Button = ({ label, onPress, variant = 'primary', isLoading, disabled = false, icon, style }: ButtonProps) => {
+export const Button = ({ 
+  label, 
+  onPress, 
+  variant = 'primary', 
+  isLoading, 
+  disabled = false, 
+  icon, 
+  iconPos = 'left',
+  iconColor,
+  style 
+}: ButtonProps) => {
+
   const getBgColor = () => {
     if (variant === 'primary') return COLORS.primary
     if (variant === 'danger') return COLORS.danger
@@ -23,6 +36,7 @@ export const Button = ({ label, onPress, variant = 'primary', isLoading, disable
   }
 
   const isDisabled = isLoading || disabled
+  const isVertical = iconPos === 'top' || iconPos === 'bottom'
 
   const getVariantStyles = (): ViewStyle => {
     if (variant === 'fab') {
@@ -41,23 +55,78 @@ export const Button = ({ label, onPress, variant = 'primary', isLoading, disable
     }
     if (variant === 'icon') {
       return {
-        padding: 8,
-        borderRadius: 12,
+        width: 56,
+        height: 56,
+        borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: COLORS.border
       }
     }
     return {
       paddingVertical: 16,
       paddingHorizontal: 24,
       borderRadius: 12,
+      flexDirection: isVertical ? 'column' : 'row',
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: variant === 'outline' ? 1 : 0,
       borderColor: variant === 'outline' ? COLORS.border : 'transparent',
     }
   }
-  
+
+  const resolveIconColor = () => {
+    if (iconColor) return iconColor
+    if (variant === 'primary' || variant === 'danger' || variant === 'fab') return COLORS.text
+    if (variant === 'outline' && disabled) return COLORS.textMuted
+    return COLORS.primary
+  }
+
+  const renderContent = () => {
+    if (isLoading) {
+      return <ActivityIndicator color={variant === 'outline' || variant === 'icon' ? COLORS.primary : COLORS.text} />
+    }
+
+    const iconElement = icon ? (
+      <Ionicons 
+        name={icon} 
+        size={variant === 'fab' ? 32 : 24} 
+        color={resolveIconColor()} 
+      />
+    ) : null
+
+    const textElement = label ? (
+      <Text style={{
+        color: disabled && variant === 'outline' ? COLORS.textMuted : COLORS.text,
+        fontSize: 16,
+        fontWeight: '600',
+        marginLeft: icon && iconPos === 'left' && !isVertical ? 8 : 0,
+        marginRight: icon && iconPos === 'right' && !isVertical ? 8 : 0,
+        marginTop: icon && iconPos === 'top' && isVertical ? 8 : 0,
+        marginBottom: icon && iconPos === 'bottom' && isVertical ? 8 : 0,
+      }}>
+        {label}
+      </Text>
+    ) : null
+
+    if (iconPos === 'right' || iconPos === 'bottom') {
+      return (
+        <>
+          {textElement}
+          {iconElement}
+        </>
+      )
+    }
+
+    return (
+      <>
+        {iconElement}
+        {textElement}
+      </>
+    )
+  }
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -71,29 +140,7 @@ export const Button = ({ label, onPress, variant = 'primary', isLoading, disable
         style
       ]}
     >
-      {isLoading ? (
-        <ActivityIndicator color={COLORS.text} />
-      ) : (
-        <>
-          {icon && (
-            <Ionicons 
-              name={icon} 
-              size={variant === 'fab' ? 32 : 24} 
-              color={variant === 'fab' ? COLORS.text : COLORS.primary} 
-            />
-          )}
-          {label && (
-            <Text style={{
-              color: disabled && variant === 'outline' ? COLORS.textMuted : COLORS.text,
-              fontSize: 16,
-              fontWeight: '600',
-              marginLeft: icon ? 8 : 0
-            }}>
-              {label}
-            </Text>
-          )}
-        </>
-      )}
+      {renderContent()}
     </TouchableOpacity>
   )
 }

@@ -54,8 +54,8 @@ export const CycleNavigator = ({ title, isCurrent, canGoBack, cycleOffset, onPre
         variant="icon"
         icon="chevron-forward"
         onPress={onNext}
-        disabled={cycleOffset >= 0}
-        style={{ opacity: cycleOffset >= 0 ? 0.3 : 1 }}
+        disabled={cycleOffset <= 0} 
+        style={{ opacity: cycleOffset <= 0 ? 0.3 : 1 }}
       />
     </View>
   )

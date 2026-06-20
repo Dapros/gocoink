@@ -1,9 +1,12 @@
 import * as SQLite from 'expo-sqlite'
+import { documentDirectory, getInfoAsync, readDirectoryAsync, deleteAsync, moveAsync } from 'expo-file-system/legacy'
 import { DBTransactionRow, UserSettings } from '@/types'
 
 // variables momentaneas de memoria para controlar la concurrencia
 let dbInstance: SQLite.SQLiteDatabase | null = null
 let dbInitPromise: Promise<SQLite.SQLiteDatabase> | null = null
+// Nombre de la base de datos por defecto
+let currentDbName = 'gocoink_v1.db'
 
 // Helper interno para calcular la fecha de finalización exacta de un ciclo
 const calculateEndDate = (startDateIso: string, mode: 'monthly' | 'biweekly' | 'free') => {
@@ -14,23 +17,45 @@ const calculateEndDate = (startDateIso: string, mode: 'monthly' | 'biweekly' | '
   } else if (mode === 'biweekly') {
     end.setDate(end.getDate() + 15)
   } else {
-    end.setMonth(end.getMonth() + 1) // El modo libre, limitado a un mes natural para el reporte
+    end.setMonth(end.getMonth() + 1)
   }
   return end.toISOString()
 }
 
 export const DatabaseService = {
+  // Cambiar el archivo de base de datos activo antes de inicializarlo
+  setDatabaseName(name: string) {
+    if (currentDbName !== name) {
+      currentDbName = name
+      dbInstance = null
+      dbInitPromise = null
+    }
+  },
+
+  getCurrentDbName() {
+    return currentDbName
+  },
+
+  resetInstance() {
+    dbInstance = null
+    dbInitPromise = null
+  },
+
+  // Obtener la ruta del directorio nativo de SQLite de la app
+  getSQLiteDirectory() {
+    return `${documentDirectory}SQLite/`
+  },
+
   async initialize() {
     // Si la base de datos ya se inicializó, la devolvemos al instante
     if (dbInstance) return dbInstance
-
     // Si otro componente ya la está inicializando (Promesa en curso), esperamos a que termine
     if (dbInitPromise) return dbInitPromise
 
     // Si nadie la ha inicializado, creamos el "Bloqueo por Promesa"
     dbInitPromise = (async () => {
       try {
-        const db = await SQLite.openDatabaseAsync('gocoink_v1.db')
+        const db = await SQLite.openDatabaseAsync(currentDbName)
 
         await db.execAsync(`
           PRAGMA foreign_keys = ON;
@@ -68,7 +93,6 @@ export const DatabaseService = {
             cycle_start_date TEXT
           );
 
-          /* NUEVA TABLA HISTÓRICA DE CICLOS/CORTES */
           CREATE TABLE IF NOT EXISTS cycles (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             cycle_mode TEXT CHECK(cycle_mode IN ('monthly', 'biweekly', 'free')) NOT NULL,
@@ -121,6 +145,62 @@ export const DatabaseService = {
     return dbInitPromise
   },
 
+  // Escanear la carpeta interna del sistema para encontrar archivos .db existentes
+  async listAvailableDatabases(): Promise<string[]> {
+    const dir = this.getSQLiteDirectory()
+    try {
+      const info = await getInfoAsync(dir)
+      if (!info.exists) return [currentDbName]
+      const files = await readDirectoryAsync(dir)
+      // Filtro únicamente de archivos con extensión .db
+      return files.filter(file => file.endsWith('.db'))
+    } catch (error) {
+      console.error('Error listando bases de datos:', error)
+      return [currentDbName]
+    }
+  },
+
+  // Eliminar físicamente un archivo de base de datos
+  async deleteDatabaseFile(name: string): Promise<void> {
+    const fileUri = `${this.getSQLiteDirectory()}${name}`
+    try {
+      const info = await getInfoAsync(fileUri)
+      if (info.exists) {
+        await deleteAsync(fileUri)
+      }
+    } catch (error) {
+      console.error('Error eliminando archivo db:', error)
+      throw error
+    }
+  },
+
+  // Renombrar el archivo físico de la base de datos activa
+  async renameCurrentDatabase(newName: string): Promise<void> {
+    // sanar el nombre para evitar errores en el sistema de archivos
+    const safeName = newName.replace(/[^a-zA-Z0-9_-]/g, '_')
+    const oldUri = `${this.getSQLiteDirectory()}${currentDbName}`
+    const newUri = `${this.getSQLiteDirectory()}${safeName}.db`
+
+    try {
+      const info = await getInfoAsync(oldUri)
+      if (info.exists) {
+        // mover/renombrar el archivo físicamente
+        await moveAsync({ from: oldUri, to: newUri })
+        // actualizar el estado interno
+        this.setDatabaseName(`${safeName}.db`)
+      }
+    } catch (error) {
+      console.error('Error renombrando base de datos:', error)
+      throw error
+    }
+  },
+
+  // Obtener volcados crudos de tablas para el exportador de datos
+  async getRawTableData<T>(tableName: string): Promise<T[]> {
+    const db = await this.initialize()
+    return await db.getAllAsync<T>(`SELECT * FROM ${tableName}`)
+  },
+
   // metodos de ajuestes
   async getUserSettings(): Promise<UserSettings> {
     const db = await this.initialize()
@@ -144,13 +224,11 @@ export const DatabaseService = {
   async saveNewCycle(mode: 'monthly' | 'biweekly' | 'free', salary: number, startDate: string): Promise<void> {
     const db = await this.initialize()
     const endDate = calculateEndDate(startDate, mode)
-    
     // Guardado en el histórico inmutable
     await db.runAsync(
       'INSERT INTO cycles (cycle_mode, base_salary, start_date, end_date) VALUES (?, ?, ?, ?)',
       [mode, salary, startDate, endDate]
     )
-
     // Actualizacion en los ajustes generales de la app
     await db.runAsync(
       'UPDATE user_settings SET cycle_mode = ?, base_salary = ?, cycle_start_date = ? WHERE id = 1;',

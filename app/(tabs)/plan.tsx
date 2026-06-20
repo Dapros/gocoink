@@ -1,23 +1,46 @@
 import React, { useState, useEffect } from "react"
-import { View, Text, ScrollView, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from "react-native"
+import { View, Text, ScrollView, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Modal } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { COLORS } from "@/constants/theme"
 import { useSettingsStore } from "@/store/useSettingsStore"
 import { Input } from "@/components/ui/Input"
 import { Button } from "@/components/ui/Button"
+import { Select } from "@/components/ui/Select"
+import { ExcelService } from "@/utils/excelHelpers"
+import { useSheetStore } from "@/store/useSheetStore"
 
 type PlanType = 'monthly' | 'biweekly' | 'free'
 
 export default function PlanScreen() {
-  const { cycleMode, baseSalary, cycleStartDate, saveSettings } = useSettingsStore()
+  const { 
+    cycleMode, 
+    baseSalary, 
+    cycleStartDate, 
+    saveSettings, 
+    availableDbs, 
+    currentDb, 
+    switchDatabase, 
+    refreshDatabaseList, 
+    purgeFullDatabase,
+    renameDatabase
+  } = useSettingsStore()
+
+  const { refreshKey } = useSheetStore() // Para escuchar cambios en transacciones desde el home
 
   const [draftMode, setDraftMode] = useState<PlanType>('monthly')
   const [draftSalary, setDraftSalary] = useState('')
+  // Estado para el renombrado de base de dato
+  const [isRenameModalVisible, setIsRenameModalVisible] = useState(false)
+  const [newProfileName, setNewProfileName] = useState('')
 
   useEffect(() => {
     if (cycleMode) setDraftMode(cycleMode)
     setDraftSalary(baseSalary.toString())
-  }, [cycleMode, baseSalary])
+  }, [cycleMode, baseSalary, currentDb])
+
+  useEffect(() => {
+    refreshDatabaseList()
+  }, [refreshKey])
 
   const getNextCutDate = () => {
     if (!cycleMode || cycleMode === 'free' || !cycleStartDate) return 'No aplica'
@@ -48,11 +71,72 @@ export default function PlanScreen() {
     )
   }
 
+  const handlePurge = () => {
+    Alert.alert(
+      "Borrado Absoluto",
+      "¿Estás completamente seguro de eliminar esta base de datos? Se borrarán permanentemente todos los ciclos y transacciones de este perfil de forma irreversible.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { 
+          text: "Sí, Eliminar", 
+          style: "destructive",
+          onPress: async () => {
+            await purgeFullDatabase()
+            Alert.alert("Base de datos limpia", "Los datos de este perfil se han reiniciado de fábrica.")
+          }
+        }
+      ]
+    )
+  }
+
+  const handleExport = async () => {
+    try {
+      await ExcelService.exportDatabaseToExcel()
+    } catch (err) {
+      Alert.alert("Error de Exportación", "No se pudo formatear la base de datos a Excel.")
+    }
+  }
+
+  const handleImport = async () => {
+    try {
+      const importedName = await ExcelService.importDatabaseFromExcel()
+      if (importedName) {
+        await refreshDatabaseList()
+        await switchDatabase(importedName)
+        Alert.alert("Importación Exitosa", "Se ha cargado el nuevo perfil financiero desde tu archivo Excel.")
+      }
+    } catch (err) {
+      Alert.alert("Error de Importación", "El archivo Excel seleccionado no contiene una estructura de GoCoink válida o está corrupto.")
+      // restaurar la base de datos que estaba activa para no dejar la app en el aire
+      await switchDatabase(currentDb)
+    }
+  }
+
+  // renombrar base de datos
+  const handleRenameProfile = async () => {
+    if (!newProfileName.trim()) return
+    try {
+      await renameDatabase(newProfileName.trim())
+      setIsRenameModalVisible(false)
+      setNewProfileName('')
+      Alert.alert("Éxito", "El perfil ha sido renombrado correctamente.")
+    } catch (error) {
+      Alert.alert("Error", "No se pudo renombrar el perfil. Intenta con otro nombre.")
+    }
+  }
+
   const modeLabels = {
     monthly: 'Mensual',
     biweekly: 'Quincenal',
     free: 'Libre (Sin sueldo fijo)'
   }
+
+  // Mapeo de listado de archivos de base de datos de la DB al formato de opciones del componente Select
+  const dbOptions = availableDbs.map(db => ({
+    value: db,
+    label: db === 'gocoink_v1.db' ? 'Balance Principal (Defecto)' : `Perfil: ${db.replace('import_', '').replace('.db', '')}`,
+    icon: 'server-outline'
+  }))
 
   return (
     <KeyboardAvoidingView 
@@ -150,7 +234,129 @@ export default function PlanScreen() {
           disabled={draftMode !== 'free' && !draftSalary} 
         />
 
+        <View style={{ height: 1, backgroundColor: COLORS.border, marginVertical: 35 }} />
+        
+        {/* CONTROL DE BASES DE DATOS BI-DIRECCIONAL */}
+        <Text style={{ fontSize: 20, fontWeight: 'bold', color: COLORS.text, marginBottom: 8 }}>
+          Gestión de Base de Datos
+        </Text>
+        <Text style={{ fontSize: 14, color: COLORS.textMuted, marginBottom: 20, lineHeight: 20 }}>
+          Tus datos se guardan de forma 100% local en tu dispositivo y nada se envía a servidores. Administra tus perfiles o respalda en Excel.
+        </Text>
+
+        {/* SELECT DINÁMICO DE WORKSPACES/BASES DE DATOS */}
+        <Select 
+          label="Perfil Financiero Activo"
+          options={dbOptions}
+          selectedValue={currentDb}
+          onSelect={(val) => switchDatabase(String(val))}
+          placeholder="Selecciona un archivo de datos"
+        />
+        {/* CONTROLES DE LA BASE DE DATOS */}
+        <View style={{ gap: 12, marginTop: 10 }}>
+          <Button 
+            label="Renombrar Perfil Actual"
+            variant="outline"
+            icon="pencil-outline"
+            iconPos="left"
+            iconColor={COLORS.text}
+            onPress={() => {
+              setNewProfileName(currentDb.replace('.db', '').replace('import_', ''))
+              setIsRenameModalVisible(true)
+            }}
+          />
+          
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12 }}>      
+            <Button 
+              variant="outline"
+              icon="share-outline"
+              iconColor={COLORS.text}
+              label="Exportar"
+              onPress={handleExport}
+              style={{
+                flex: 1
+              }}
+            />
+
+            <Button 
+              variant="outline"
+              icon="download-outline"
+              iconPos="left"
+              iconColor={COLORS.text}
+              label="Importar"
+              onPress={handleImport}
+              style={{
+                flex: 1
+              }}
+            />
+          </View>
+
+          <Button 
+            label="Borrar Perfil Actual"
+            variant="danger"
+            icon="trash-outline"
+            onPress={handlePurge}
+          />
+        </View>
       </ScrollView>
+
+      {/* MODAL PARA RENOMBRAR EL PERFIL */}
+      <Modal visible={isRenameModalVisible} transparent={true} animationType="fade">
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            justifyContent: 'center',
+            padding: 20
+          }}
+        >
+          <View style={{
+            backgroundColor: COLORS.surface,
+            padding: 24,
+            borderRadius: 24,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.2,
+            shadowRadius: 10,
+            elevation: 10
+          }}>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: COLORS.text, marginBottom: 15, textAlign: 'center' }}>
+              Renombrar Perfil
+            </Text>
+            
+            <Text style={{ fontSize: 14, color: COLORS.textMuted, marginBottom: 20, textAlign: 'center' }}>
+              Escribe un nuevo nombre para identificar esta base de datos.
+            </Text>
+
+            <Input 
+              label="Nombre del perfil"
+              placeholder="Ej: Finanzas_Casa"
+              value={newProfileName}
+              onChangeText={setNewProfileName}
+              autoFocus
+            />
+
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
+              <View style={{ flex: 1 }}>
+                <Button 
+                  label="Cancelar" 
+                  variant="outline" 
+                  onPress={() => setIsRenameModalVisible(false)} 
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button 
+                  label="Guardar" 
+                  variant="primary" 
+                  onPress={handleRenameProfile} 
+                  disabled={!newProfileName.trim()}
+                />
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </KeyboardAvoidingView>
   )
 }

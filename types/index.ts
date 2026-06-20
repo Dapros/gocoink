@@ -60,3 +60,36 @@ export interface GroupedTransactions {
   isToday: boolean;      // True si la fecha coincide con el día actual
   data: DBTransactionRow[];
 }
+
+// De aqui para abajo tipados Raw crudos para la exportacion de la base de datos, que representan las columnas exactas snake_case como están creadas en SQLite
+export interface RawTransaction {
+  id: number
+  amount: number
+  type: 'income' | 'expense'
+  description: string
+  date: string
+  category_id: number
+  payment_method_id: number
+}
+
+export interface RawCycle {
+  id: number
+  cycle_mode: 'monthly' | 'biweekly' | 'free'
+  base_salary: number
+  start_date: string
+  end_date: string
+}
+
+export interface RawCategory {
+  id: number
+  name: string
+  icon: string
+  is_custom: number
+}
+
+export interface RawPaymentMethod {
+  id: number
+  name: string
+  icon: string
+  is_custom: number
+}

@@ -15,28 +15,41 @@ interface SettingsState {
   baseSalary: number
   cycleStartDate: string | null
   cycles: DBCycleRow[]
+  availableDbs: string[]
+  currentDb: string
   isLoaded: boolean
 
   loadSettings: () => Promise<void>
   saveSettings: (mode: 'monthly' | 'biweekly' | 'free', salary: number, startDate: string) => Promise<void>
+  switchDatabase: (dbName: string) => Promise<void>
+  refreshDatabaseList: () => Promise<void>
+  purgeFullDatabase: () => Promise<void>
+  renameDatabase: (newName: string) => Promise<void>
 }
 
-export const useSettingsStore = create<SettingsState>((set) => ({
+export const useSettingsStore = create<SettingsState>((set, get) => ({
   cycleMode: null,
   baseSalary: 0,
   cycleStartDate: null,
   cycles: [],
+  availableDbs: [],
+  currentDb: 'gocoink_v1.db',
   isLoaded: false,
 
   loadSettings: async () => {
     try {
+      const activeDb = DatabaseService.getCurrentDbName()
       const settings = await DatabaseService.getUserSettings()
       const history = await DatabaseService.getAllCycles()
+      const dbs = await DatabaseService.listAvailableDatabases()
+      
       set({ 
         cycleMode: settings.cycleMode, 
         baseSalary: settings.baseSalary, 
         cycleStartDate: settings.cycleStartDate,
         cycles: history,
+        availableDbs: dbs,
+        currentDb: activeDb,
         isLoaded: true 
       })
     } catch (error) {
@@ -47,7 +60,6 @@ export const useSettingsStore = create<SettingsState>((set) => ({
 
   saveSettings: async (mode, salary, startDate) => {
     try {
-      // método que escribe tanto en user_settings como en el histórico cycles
       await DatabaseService.saveNewCycle(mode, salary, startDate)
       const history = await DatabaseService.getAllCycles()
       set({ 
@@ -59,5 +71,50 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     } catch (error) {
       console.error("Error guardando ajustes:", error)
     }
-  }
+  },
+
+  // cambia el puntero del archivo y vuelve a consultar la data limpia de ese archivo
+  switchDatabase: async (dbName: string) => {
+    try {
+      DatabaseService.setDatabaseName(dbName)
+      const settings = await DatabaseService.getUserSettings()
+      const history = await DatabaseService.getAllCycles()
+      
+      set({
+        cycleMode: settings.cycleMode,
+        baseSalary: settings.baseSalary,
+        cycleStartDate: settings.cycleStartDate,
+        cycles: history,
+        currentDb: dbName
+      })
+    } catch (error) {
+      console.error("Error alternando base de datos:", error)
+    }
+  },
+
+  refreshDatabaseList: async () => {
+    const dbs = await DatabaseService.listAvailableDatabases()
+    set({ availableDbs: dbs })
+  },
+
+  purgeFullDatabase: async () => {
+    try {
+      const activeDb = get().currentDb
+      await DatabaseService.deleteDatabaseFile(activeDb)
+      DatabaseService.resetInstance()   
+      await DatabaseService.initialize()
+      await get().loadSettings()
+    } catch (error) {
+      console.error("Error purgando base de datos:", error)
+    }
+  },
+  renameDatabase: async (newName: string) => {
+    try {
+      await DatabaseService.renameCurrentDatabase(newName)
+      await get().refreshDatabaseList()
+      set({ currentDb: DatabaseService.getCurrentDbName() })
+    } catch (error) {
+      console.error("Error al renombrar el perfil:", error)
+    }
+  },
 }))

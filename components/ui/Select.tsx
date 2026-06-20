@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, Modal, FlatList } from 'react-native'
+import React, { useState, useRef, useEffect } from 'react'
+import { View, Text, TouchableOpacity, Modal, FlatList, Animated } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { COLORS } from '@/constants/theme'
@@ -23,6 +23,20 @@ export const Select = ({
   error
 } : SelectProps) => {
   const [isOpen, setIsOpen] = useState(false)
+
+  const rotateAnim = useRef(new Animated.Value(0)).current
+  useEffect(() => {
+    Animated.timing(rotateAnim, {
+      toValue: isOpen ? 1 : 0,
+      duration: 250, // 250ms es el "sweet spot" para animaciones de UI fluidas pero rápidas
+      useNativeDriver: true, // Optimización: corre la animación en el hilo nativo
+    }).start()
+  }, [isOpen])
+
+  const spin = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg'] // 0 = abajo, 180 = arriba
+  })
 
   const selectedItem = options.find((opt) => opt.value === selectedValue)
 
@@ -53,7 +67,10 @@ export const Select = ({
         <Text style={{ color: selectedItem ? COLORS.text : COLORS.textMuted, fontSize: 16 }}>
           {selectedItem ? selectedItem.label : placeholder}
         </Text>
-        <Ionicons name="chevron-down" size={20} color={COLORS.textMuted} />
+
+        <Animated.View style={{ transform: [{ rotate: spin }] }}>
+          <Ionicons name="chevron-down" size={20} color={COLORS.textMuted} />
+        </Animated.View>
       </TouchableOpacity>
 
       {/* Mensaje de error */}
