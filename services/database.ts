@@ -36,6 +36,18 @@ export const DatabaseService = {
     return currentDbName
   },
 
+  async closeConnection() {
+    if (dbInstance) {
+      try {
+        await dbInstance.closeAsync() // Libera el archivo nativo en Android/iOS
+      } catch (error) {
+        console.error('Error cerrando la base de datos nativa:', error)
+      }
+    }
+    dbInstance = null
+    dbInitPromise = null
+  },
+
   resetInstance() {
     dbInstance = null
     dbInitPromise = null
@@ -145,18 +157,19 @@ export const DatabaseService = {
     return dbInitPromise
   },
 
-  // Escanear la carpeta interna del sistema para encontrar archivos .db existentes
+  // Escanear la carpeta interna del sistema para encontrar archivos .db existentes de forma realista
   async listAvailableDatabases(): Promise<string[]> {
     const dir = this.getSQLiteDirectory()
     try {
       const info = await getInfoAsync(dir)
-      if (!info.exists) return [currentDbName]
+      // Si la carpeta no existe, devolvemos un array vacío, no el perfil por defecto
+      if (!info.exists) return []
       const files = await readDirectoryAsync(dir)
       // Filtro únicamente de archivos con extensión .db
       return files.filter(file => file.endsWith('.db'))
     } catch (error) {
       console.error('Error listando bases de datos:', error)
-      return [currentDbName]
+      return []
     }
   },
 

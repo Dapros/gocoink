@@ -1,18 +1,22 @@
 import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native'
+import { View, Text, TouchableOpacity, Modal, KeyboardAvoidingView, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { COLORS } from '@/constants/theme'
 import { useSettingsStore } from '@/store/useSettingsStore'
 import { Input } from './ui/Input'
+import { useRouter } from 'expo-router'
 
 type PlanType = 'monthly' | 'biweekly' | 'free'
 
 export const OnboardingSetup = () => {
   const { saveSettings } = useSettingsStore()
+  const router = useRouter()
   
   const [step, setStep] = useState<1 | 2>(1)
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('monthly')
   const [salary, setSalary] = useState('')
+
+  const [profileName, setProfileName] = useState('Balance Principal')
 
   const handleSave = async () => {
     // Si es modo libre, el salario base es 0
@@ -20,11 +24,30 @@ export const OnboardingSetup = () => {
     const today = new Date().toISOString()
     
     // Guardamos en Zustand y SQLite al mismo tiempo
-    await saveSettings(selectedPlan, finalSalary, today)
+    await saveSettings(selectedPlan, finalSalary, today, profileName)
+    router.navigate("/")
   }
 
   const renderStep1 = () => (
     <View style={{ padding: 20 }}>
+      <Text style={{ fontSize: 28, fontWeight: 'bold', color: COLORS.text, marginBottom: 8 }}>
+        ¡Te damos la bienvenida!
+      </Text>
+      <Text style={{ fontSize: 16, color: COLORS.textMuted, marginBottom: 24, lineHeight: 22 }}>
+        Configura tu nuevo espacio financiero personal de forma 100% local.
+      </Text>
+
+      <View style={{ marginBottom: 8 }}>
+        <Input 
+          label="Nombre de este Perfil"
+          placeholder="Ej: Mis Gastos o Negocio"
+          value={profileName}
+          onChangeText={setProfileName}
+        />
+      </View>
+
+      <View style={{ height: 1, backgroundColor: COLORS.border, marginBottom: 8 }} />
+
       <Text style={{ fontSize: 28, fontWeight: 'bold', color: COLORS.text, marginBottom: 8 }}>
         Elige tu modalidad
       </Text>

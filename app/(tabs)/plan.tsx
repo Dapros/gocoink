@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react"
+import { useRouter } from "expo-router"
 import { View, Text, ScrollView, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Modal } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { COLORS } from "@/constants/theme"
@@ -12,6 +13,8 @@ import { useSheetStore } from "@/store/useSheetStore"
 type PlanType = 'monthly' | 'biweekly' | 'free'
 
 export default function PlanScreen() {
+  const router = useRouter()
+  
   const { 
     cycleMode, 
     baseSalary, 
@@ -22,7 +25,8 @@ export default function PlanScreen() {
     switchDatabase, 
     refreshDatabaseList, 
     purgeFullDatabase,
-    renameDatabase
+    renameDatabase,
+    createNewProfile
   } = useSettingsStore()
 
   const { refreshKey } = useSheetStore() // Para escuchar cambios en transacciones desde el home
@@ -32,6 +36,9 @@ export default function PlanScreen() {
   // Estado para el renombrado de base de dato
   const [isRenameModalVisible, setIsRenameModalVisible] = useState(false)
   const [newProfileName, setNewProfileName] = useState('')
+
+  const [isCreateModalVisible, setIsCreateModalVisible] = useState(false)
+  const [newCreateProfileName, setNewCreateProfileName] = useState('')
 
   useEffect(() => {
     if (cycleMode) setDraftMode(cycleMode)
@@ -56,19 +63,33 @@ export default function PlanScreen() {
 
   const handleSave = async () => {
     const finalSalary = draftMode === 'free' ? 0 : Number(draftSalary)
-    let startDate = cycleStartDate || new Date().toISOString()
-
-    if (draftMode !== cycleMode) {
-      startDate = new Date().toISOString()
-    }
-
-    await saveSettings(draftMode, finalSalary, startDate)
     
-    Alert.alert(
-      "¡Plan Actualizado!", 
-      "Tu configuración financiera ha sido guardada con éxito.",
-      [{ text: "Entendido", style: "default" }]
-    )
+    // Si el modo en la interfaz es diferente al modo guardado actual, advertimos del corte obligatorio
+    if (draftMode !== cycleMode && cycleMode !== null) {
+      Alert.alert(
+        "Corte de Ciclo Forzado",
+        "Estás cambiando la modalidad de tu plan actual. Esto cerrará el ciclo vigente y creará un corte histórico inmutable en este perfil. ¿Deseas continuar?",
+        [
+          { text: "Cancelar", style: "cancel" },
+          {
+            text: "Sí, Guardar y Cortar",
+            style: "default",
+            onPress: async () => {
+              const startDate = new Date().toISOString()
+              await saveSettings(draftMode, finalSalary, startDate)
+              // AUTO-SWIPE: Para redirigir a la pestaña de Inicio
+              router.navigate("/")
+            }
+          }
+        ]
+      )
+    } else {
+      let startDate = cycleStartDate || new Date().toISOString()
+      await saveSettings(draftMode, finalSalary, startDate)
+      Alert.alert("¡Plan Actualizado!", "Tu configuración financiera ha sido guardada con éxito.")
+      // AUTO-SWIPE OBLIGATORIO: También cuando guarda cambios de sueldo normales
+      router.navigate("/")
+    }
   }
 
   const handlePurge = () => {
@@ -122,6 +143,40 @@ export default function PlanScreen() {
       Alert.alert("Éxito", "El perfil ha sido renombrado correctamente.")
     } catch (error) {
       Alert.alert("Error", "No se pudo renombrar el perfil. Intenta con otro nombre.")
+    }
+  }
+
+  const handleCreateProfile = async () => {
+    if (!newCreateProfileName.trim()) return
+    try {
+      await createNewProfile(newCreateProfileName.trim())
+      setIsCreateModalVisible(false)
+      setNewCreateProfileName('')
+      // Al crear, el cycleMode será null, lo que disparará el Onboarding automáticamente
+    } catch (error) {
+      Alert.alert("Error", "No se pudo crear el perfil. Intenta con otro nombre.")
+    }
+  }
+
+  const handleSwitchDatabase = async (selectedDb: string) => {
+    // Si el usuario selecciona la base de datos en la que ya está, no hacemos nada
+    if (selectedDb === currentDb) return
+
+    try {
+      await switchDatabase(selectedDb)
+      
+      // Limpiamos el nombre para que se vea estético en la alerta
+      const cleanName = selectedDb === 'gocoink_v1.db' 
+        ? 'Balance Principal' 
+        : selectedDb.replace('.db', '').replace('import_', '')
+
+      Alert.alert(
+        "Perfil Cargado", 
+        `Has cambiado exitosamente al perfil: ${cleanName}`,
+        [{ text: "Continuar", style: "default" }]
+      )
+    } catch (error) {
+      Alert.alert("Error", "No se pudo cambiar de perfil en este momento.")
     }
   }
 
@@ -249,8 +304,16 @@ export default function PlanScreen() {
           label="Perfil Financiero Activo"
           options={dbOptions}
           selectedValue={currentDb}
-          onSelect={(val) => switchDatabase(String(val))}
+          onSelect={(val) => handleSwitchDatabase(String(val))} 
           placeholder="Selecciona un archivo de datos"
+        />
+        <Button 
+          label="Crear Nuevo Perfil"
+          variant="outline"
+          icon="add-circle-outline"
+          iconPos="left"
+          iconColor={COLORS.text}
+          onPress={() => setIsCreateModalVisible(true)}
         />
         {/* CONTROLES DE LA BASE DE DATOS */}
         <View style={{ gap: 12, marginTop: 10 }}>
@@ -352,6 +415,37 @@ export default function PlanScreen() {
                   onPress={handleRenameProfile} 
                   disabled={!newProfileName.trim()}
                 />
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal visible={isCreateModalVisible} transparent={true} animationType="fade">
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 20 }}
+        >
+          <View style={{ backgroundColor: COLORS.surface, padding: 24, borderRadius: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 10, elevation: 10 }}>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: COLORS.text, marginBottom: 15, textAlign: 'center' }}>
+              Crear Nuevo Perfil
+            </Text>
+            <Text style={{ fontSize: 14, color: COLORS.textMuted, marginBottom: 20, textAlign: 'center' }}>
+              Inicia un nuevo balance financiero desde cero. Tus perfiles actuales seguirán intactos.
+            </Text>
+            <Input 
+              label="Nombre del nuevo perfil"
+              placeholder="Ej: Negocio_2026"
+              value={newCreateProfileName}
+              onChangeText={setNewCreateProfileName}
+              autoFocus
+            />
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
+              <View style={{ flex: 1 }}>
+                <Button label="Cancelar" variant="outline" onPress={() => setIsCreateModalVisible(false)} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button label="Crear" variant="primary" onPress={handleCreateProfile} disabled={!newCreateProfileName.trim()} />
               </View>
             </View>
           </View>

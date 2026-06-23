@@ -6,6 +6,7 @@ import { RawCategory, RawCycle, RawPaymentMethod, RawTransaction } from '@/types
 
 // Transforma la data en formato XML compatible con múltiples pestañas en Excel
 const generateExcelXml = (
+  profileName: string,
   transactions: RawTransaction[], 
   cycles: RawCycle[], 
   categories: RawCategory[], 
@@ -25,8 +26,13 @@ const generateExcelXml = (
     
     data.forEach(row => {
       xml += '      <Row>\n'
+      
+      // Si estamos en la pestaña de Transacciones, añadimos el dato del perfil en la primera celda
+      if (name === 'Transacciones') {
+        xml += `        <Cell><Data ss:Type="String">${profileName}</Data></Cell>\n`
+      }
+
       keys.forEach(k => {
-        // Acceder a row[k] con una aserción de tipo para que TS no se queje
         const val = (row as any)[k] === null || (row as any)[k] === undefined ? '' : (row as any)[k]
         const type = typeof val === 'number' ? 'Number' : 'String'
         xml += `        <Cell><Data ss:Type="${type}">${val}</Data></Cell>\n`
@@ -40,7 +46,8 @@ const generateExcelXml = (
   let fileXml = `<?xml version="1.0" encoding="utf-8"?>\n<?mso-application progid="Excel.Sheet"?>\n`
   fileXml += `<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html="http://www.w3.org/TR/REC-html40">\n`
   
-  fileXml += createSheet<RawTransaction>('Transacciones', ['ID', 'Monto', 'Tipo', 'Descripción', 'Fecha', 'ID Categoría', 'ID Método'], transactions, ['id', 'amount', 'type', 'description', 'date', 'category_id', 'payment_method_id'])
+  // La columna "Perfil" en la cabecera de las transacciones
+  fileXml += createSheet<RawTransaction>('Transacciones', ['Perfil', 'ID', 'Monto', 'Tipo', 'Descripción', 'Fecha', 'ID Categoría', 'ID Método'], transactions, ['id', 'amount', 'type', 'description', 'date', 'category_id', 'payment_method_id'])
   fileXml += createSheet<RawCycle>('Ciclos', ['ID', 'Modo', 'Sueldo Base', 'Inicio', 'Fin'], cycles, ['id', 'cycle_mode', 'base_salary', 'start_date', 'end_date'])
   fileXml += createSheet<RawCategory>('Categorias', ['ID', 'Nombre', 'Icono', 'Personalizado'], categories, ['id', 'name', 'icon', 'is_custom'])
   fileXml += createSheet<RawPaymentMethod>('Metodos Pago', ['ID', 'Nombre', 'Icono', 'Personalizado'], methods, ['id', 'name', 'icon', 'is_custom'])
@@ -52,14 +59,19 @@ const generateExcelXml = (
 export const ExcelService = {
   async exportDatabaseToExcel() {
     try {
-      const tx = await DatabaseService.getRawTableData('transactions')
-      const cy = await DatabaseService.getRawTableData('cycles')
-      const cat = await DatabaseService.getRawTableData('categories')
-      const meth = await DatabaseService.getRawTableData('payment_methods')
+      const tx = await DatabaseService.getRawTableData<RawTransaction>('transactions')
+      const cy = await DatabaseService.getRawTableData<RawCycle>('cycles')
+      const cat = await DatabaseService.getRawTableData<RawCategory>('categories')
+      const meth = await DatabaseService.getRawTableData<RawPaymentMethod>('payment_methods')
 
-      const excelContent = generateExcelXml(tx, cy, cat, meth)
-      const currentDb = DatabaseService.getCurrentDbName().replace('.db', '')
-      const filename = `${cacheDirectory}${currentDb}_reporte.xls`
+      const currentDb = DatabaseService.getCurrentDbName()
+      const cleanProfileName = currentDb === 'gocoink_v1.db' ? 'Balance Principal' : currentDb.replace('.db', '').replace('import_', '')
+
+      // Ordenar transacciones por fecha de registro de forma ascendente (antiguas primero)
+      const sortedTx = tx.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+      const excelContent = generateExcelXml(cleanProfileName, sortedTx, cy, cat, meth)
+      const filename = `${cacheDirectory}${currentDb.replace('.db', '')}_reporte.xls`
 
       await writeAsStringAsync(filename, excelContent, { encoding: EncodingType.UTF8 })
 
@@ -140,8 +152,9 @@ export const ExcelService = {
       // Restaurar Transacciones
       const txRows = parseSheetRows('Transacciones')
       for (const row of txRows) {
-        if (row.length >= 7) {
-          await db.runAsync('INSERT INTO transactions (id, amount, type, description, date, category_id, payment_method_id) VALUES (?, ?, ?, ?, ?, ?, ?)', [Number(row[0]), Number(row[1]), row[2], row[3], row[4], Number(row[5]), Number(row[6])])
+        if (row.length >= 8) {
+          // El índice 0 es el nombre de la columna del Perfil, los datos reales de la transacción se corren 1 espacio
+          await db.runAsync('INSERT INTO transactions (id, amount, type, description, date, category_id, payment_method_id) VALUES (?, ?, ?, ?, ?, ?, ?)', [Number(row[1]), Number(row[2]), row[3], row[4], row[5], Number(row[6]), Number(row[7])])
         }
       }
 

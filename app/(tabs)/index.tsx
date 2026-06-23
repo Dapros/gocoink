@@ -21,7 +21,7 @@ export default function HomeScreen() {
   // estados de los filtros
   const { activeType, activeTime, activeMethod } = useFilterStore()
   // sueldo base y el modo del usuario
-  const { cycles } = useSettingsStore()
+  const { cycles, currentDb } = useSettingsStore()
 
   const [rawTransactions, setRawTransactions] = useState<DBTransactionRow[]>([])
   const [cycleOffset, setCycleOffset] = useState(0)
@@ -39,9 +39,13 @@ export default function HomeScreen() {
     loadCatalogs()
   }, [])
 
+  // NUEVO EFECTO CRÍTICO: Cada vez que el usuario alterne de Perfil, vaciamos la UI
+  // Esto limpia el gráfico de Donas y el listado antes de inyectar la nueva data del archivo .db
   useEffect(() => {
+    setRawTransactions([]) // Vaciado absoluto de transacciones del perfil viejo
+    setCycleOffset(0)      // Reinicio del viaje en el tiempo al presente
     fetchTransactions()
-  }, [refreshKey])
+  }, [currentDb, refreshKey]) // Escucha cambios de perfil de base de datos
 
   // Límites del viaje en el tiempo controlados por la longitud del array
   const canGoBack = cycleOffset < cycles.length - 1
@@ -49,6 +53,17 @@ export default function HomeScreen() {
   const { groupedTransactions, totalBudget, totalExpenses, cycleTitle, isCurrentCycle } = useMemo(() => {
     // ciclo correspondiente según el puntero del navegador
     const currentCycleData = cycles[cycleOffset]
+
+    // Si se cambia de perfil y la data de ciclos de Zustand aún está cargando, evitamos cálculos erróneos
+    if (!currentCycleData) {
+      return {
+        groupedTransactions: [],
+        totalBudget: 0,
+        totalExpenses: 0,
+        cycleTitle: 'Cargando perfil...',
+        isCurrentCycle: true
+      }
+    }
     
     // Formateo de las fechas y título reales del registro
     const cycleInfo = formatCycleTitle(currentCycleData)
@@ -87,7 +102,7 @@ export default function HomeScreen() {
       isCurrentCycle: cycleOffset === 0
     }
   }, [rawTransactions, activeType, activeTime, activeMethod, cycles, cycleOffset])
-
+  
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
