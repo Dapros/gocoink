@@ -27,6 +27,9 @@ export default function HomeScreen() {
   const [cycleOffset, setCycleOffset] = useState(0)
 
   const fetchTransactions = async () => {
+    // FIX CRÍTICO: Si no hay perfil activo (App Vacia en Onboarding), abortamos la búsqueda
+    if (!currentDb || currentDb === '') return 
+
     try {
       const rawData = await DatabaseService.getAllTransactions()
       setRawTransactions(rawData)
@@ -36,16 +39,20 @@ export default function HomeScreen() {
   }
 
   useEffect(() => {
-    loadCatalogs()
-  }, [])
+    // FIX CRÍTICO: Solo se carga los catálogos si ya existe un perfil confirmado
+    if (currentDb && currentDb !== '') {
+      loadCatalogs()
+    }
+  }, [currentDb])
 
-  // NUEVO EFECTO CRÍTICO: Cada vez que el usuario alterne de Perfil, vaciamos la UI
-  // Esto limpia el gráfico de Donas y el listado antes de inyectar la nueva data del archivo .db
   useEffect(() => {
-    setRawTransactions([]) // Vaciado absoluto de transacciones del perfil viejo
-    setCycleOffset(0)      // Reinicio del viaje en el tiempo al presente
+    // FIX CRÍTICO: Bloqueo la ejecución fantasma
+    if (!currentDb || currentDb === '') return 
+    
+    setRawTransactions([])
+    setCycleOffset(0)      
     fetchTransactions()
-  }, [currentDb, refreshKey]) // Escucha cambios de perfil de base de datos
+  }, [currentDb, refreshKey])
 
   // Límites del viaje en el tiempo controlados por la longitud del array
   const canGoBack = cycleOffset < cycles.length - 1

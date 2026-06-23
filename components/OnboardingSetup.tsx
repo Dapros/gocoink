@@ -9,22 +9,26 @@ import { useRouter } from 'expo-router'
 type PlanType = 'monthly' | 'biweekly' | 'free'
 
 export const OnboardingSetup = () => {
-  const { saveSettings } = useSettingsStore()
+  const { saveSettings, currentDb } = useSettingsStore()
   const router = useRouter()
+  // Si currentDb está vacío, significa que el usuario acaba de instalar la app o borró absolutamente todos los perfiles
+  const isVoidApp = currentDb === ''
   
   const [step, setStep] = useState<1 | 2>(1)
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('monthly')
   const [salary, setSalary] = useState('')
-
-  const [profileName, setProfileName] = useState('Balance Principal')
+  const [profileName, setProfileName] = useState('')
 
   const handleSave = async () => {
     // Si es modo libre, el salario base es 0
     const finalSalary = selectedPlan === 'free' ? 0 : Number(salary)
     const today = new Date().toISOString()
-    
+
+    // Solo enviamos el nombre personalizado si la app está en modo Vacio
+    const finalProfileName = isVoidApp ? profileName : undefined
+
     // Guardamos en Zustand y SQLite al mismo tiempo
-    await saveSettings(selectedPlan, finalSalary, today, profileName)
+    await saveSettings(selectedPlan, finalSalary, today, finalProfileName)
     router.navigate("/")
   }
 
@@ -37,16 +41,19 @@ export const OnboardingSetup = () => {
         Configura tu nuevo espacio financiero personal de forma 100% local.
       </Text>
 
-      <View style={{ marginBottom: 8 }}>
-        <Input 
-          label="Nombre de este Perfil"
-          placeholder="Ej: Mis Gastos o Negocio"
-          value={profileName}
-          onChangeText={setProfileName}
-        />
-      </View>
-
-      <View style={{ height: 1, backgroundColor: COLORS.border, marginBottom: 8 }} />
+      {isVoidApp && (
+        <>
+          <View style={{ marginBottom: 8 }}>
+            <Input 
+              label="Nombre de este Perfil"
+              placeholder="Ej: Balance Principal (Opcional)"
+              value={profileName}
+              onChangeText={setProfileName}
+            />
+          </View>
+          <View style={{ height: 1, backgroundColor: COLORS.border, marginBottom: 8 }} />
+        </>
+      )}
 
       <Text style={{ fontSize: 28, fontWeight: 'bold', color: COLORS.text, marginBottom: 8 }}>
         Elige tu modalidad

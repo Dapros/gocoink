@@ -103,7 +103,18 @@ export default function PlanScreen() {
           style: "destructive",
           onPress: async () => {
             await purgeFullDatabase()
-            Alert.alert("Base de datos limpia", "Los datos de este perfil se han reiniciado de fábrica.")
+            
+            // Evaluar si el store quedó vacío para decidir el mensaje
+            // Si el modo quedó nulo, significa que no quedaban bases de datos
+            const { cycleMode } = useSettingsStore.getState()
+            
+            if (cycleMode) {
+              Alert.alert("Perfil Eliminado", "La app ha cargado automáticamente tu siguiente perfil disponible.")
+              // AUTO-SWIPE: PAra llevar al usuario al inicio para ver su perfil cargado
+              router.navigate("/")
+            } else {
+              Alert.alert("Base de datos limpia", "Todos los perfiles han sido eliminados.")
+            }
           }
         }
       ]
@@ -138,6 +149,7 @@ export default function PlanScreen() {
     if (!newProfileName.trim()) return
     try {
       await renameDatabase(newProfileName.trim())
+      await refreshDatabaseList() // Forzar sincronización del select
       setIsRenameModalVisible(false)
       setNewProfileName('')
       Alert.alert("Éxito", "El perfil ha sido renombrado correctamente.")
@@ -150,9 +162,12 @@ export default function PlanScreen() {
     if (!newCreateProfileName.trim()) return
     try {
       await createNewProfile(newCreateProfileName.trim())
+      await refreshDatabaseList() // Forzar actualización de la lista de perfiles
       setIsCreateModalVisible(false)
       setNewCreateProfileName('')
-      // Al crear, el cycleMode será null, lo que disparará el Onboarding automáticamente
+
+      // AUTO-SWIPE: Forzar la navegación a la pestaña de inicio limpia para activar el Onboarding controlado
+      router.navigate("/")
     } catch (error) {
       Alert.alert("Error", "No se pudo crear el perfil. Intenta con otro nombre.")
     }

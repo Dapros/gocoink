@@ -35,13 +35,13 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   cycleStartDate: null,
   cycles: [],
   availableDbs: [],
-  currentDb: 'gocoink_v1.db',
+  currentDb: '',
   isLoaded: false,
 
   loadSettings: async () => {
     try {
       const dbs = await DatabaseService.listAvailableDatabases()
-      
+
       // Si la app está totalmente vacia y no existen archivos físicos
       if (dbs.length === 0) {
         set({ 
@@ -59,7 +59,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       // Si ya existen perfiles registrados, buscamos el puntero de persistencia
       const savedDb = await AsyncStorage.getItem('gocoink_active_db')
       const targetDb = (savedDb && dbs.includes(savedDb)) ? savedDb : dbs[0]
-      
+
       DatabaseService.setDatabaseName(targetDb)
       await AsyncStorage.setItem('gocoink_active_db', targetDb)
 
@@ -84,16 +84,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   // Ajustado para admitir opcionalmente el nombre personalizado del perfil en su primer inicio
   saveSettings: async (mode: 'monthly' | 'biweekly' | 'free', salary: number, startDate: string, customProfileName?: string) => {
     try {
-      // Si entra por primera vez (currentDb está vacío), bautizamos el archivo físico con su nombre personalizado
-      if (!get().cycleMode && customProfileName) {
-        const cleanName = customProfileName.trim()
+      // SOLO si la app está en estado 100% virgen (currentDb está vacío), configuramos el nombre del archivo
+      if (get().currentDb === '') {
+        const cleanName = (customProfileName && customProfileName.trim() !== '') ? customProfileName.trim() : 'Balance_Principal'
         const safeFileName = `${cleanName.replace(/[^a-zA-Z0-9_-]/g, '_')}.db`
-        // Si el nombre ingresado es diferente al puntero temporal, hacemos el cambio físico
-        if (DatabaseService.getCurrentDbName() !== safeFileName) {
-          await DatabaseService.closeConnection()
-          DatabaseService.setDatabaseName(safeFileName)
-          await AsyncStorage.setItem('gocoink_active_db', safeFileName)
-        }
+        
+        await DatabaseService.closeConnection()
+        DatabaseService.setDatabaseName(safeFileName)
+        await AsyncStorage.setItem('gocoink_active_db', safeFileName)
       }
 
       // Forzar la creación del archivo SQLite y sus tablas correspondientes
@@ -130,12 +128,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       // cargar los datos
       const settings = await DatabaseService.getUserSettings()
       const history = await DatabaseService.getAllCycles()
+      const dbs = await DatabaseService.listAvailableDatabases()
       
       set({
         cycleMode: settings.cycleMode,
         baseSalary: settings.baseSalary,
         cycleStartDate: settings.cycleStartDate,
         cycles: history,
+        availableDbs: dbs,
         currentDb: dbName
       })
     } catch (error) {
@@ -154,16 +154,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       await DatabaseService.closeConnection() 
       await DatabaseService.deleteDatabaseFile(activeDb)
       // obtener la lista actualizada de archivos físicos .db restantes
-      const remainingDbs = await DatabaseService.listAvailableDatabases()
-      // intenter seleccionar una base de datos restante. Si no queda ninguna, volvemos a la por defecto.
-      const fallbackDb = remainingDbs.length > 0 ? remainingDbs[0] : 'gocoink_v1.db'
+      let remainingDbs = await DatabaseService.listAvailableDatabases()
 
-      DatabaseService.setDatabaseName(fallbackDb)
-      // Persistencia del nuevo perfil que la app auto-seleccionó tras el borrado
-      await AsyncStorage.setItem('gocoink_active_db', fallbackDb)
+      // FIX CRÍTICO: Forzar la exclusión manual de la base de datos recién borrada 
+      // por si el sistema de archivos del celular está lento y aún la devuelve en la lista.
+      remainingDbs = remainingDbs.filter(db => db !== activeDb)
 
-      // Si no quedan bases de datos, dejamos que el flujo se inicialice limpio en el Onboarding
       if (remainingDbs.length === 0) {
+        await AsyncStorage.removeItem('gocoink_active_db')
         set({
           cycleMode: null,
           baseSalary: 0,
@@ -174,6 +172,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         })
         return
       }
+
+      const fallbackDb = remainingDbs[0]
+      DatabaseService.setDatabaseName(fallbackDb)
+      // Persistencia del nuevo perfil que la app auto-seleccionó tras el borrado
+      await AsyncStorage.setItem('gocoink_active_db', fallbackDb)
       
       await DatabaseService.initialize()
       // Forzamos el refresco completo de las variables del estado global con el nuevo archivo activo
@@ -196,12 +199,15 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   renameDatabase: async (newName: string) => {
     try {
       await DatabaseService.renameCurrentDatabase(newName)
-      await get().refreshDatabaseList()
-      
       const updatedDbName = DatabaseService.getCurrentDbName()
       await AsyncStorage.setItem('gocoink_active_db', updatedDbName)
+      
+      const dbs = await DatabaseService.listAvailableDatabases()
 
-      set({ currentDb: updatedDbName })
+      set({ 
+        currentDb: updatedDbName,
+        availableDbs: dbs
+      })
     } catch (error) {
       console.error("Error al renombrar el perfil:", error)
     }
@@ -217,7 +223,19 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       await AsyncStorage.setItem('gocoink_active_db', newDbName)
 
       await DatabaseService.initialize()
-      await get().loadSettings()
+
+      const settings = await DatabaseService.getUserSettings()
+      const history = await DatabaseService.getAllCycles()
+      const dbs = await DatabaseService.listAvailableDatabases()
+      
+      set({
+        cycleMode: settings.cycleMode,
+        baseSalary: settings.baseSalary,
+        cycleStartDate: settings.cycleStartDate,
+        cycles: history,
+        availableDbs: dbs,
+        currentDb: newDbName
+      })
     } catch (error) {
       console.error("Error creando nuevo perfil:", error)
     }
