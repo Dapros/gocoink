@@ -1,3 +1,4 @@
+// Creado con IA
 import { cacheDirectory, EncodingType, writeAsStringAsync, readAsStringAsync } from 'expo-file-system/legacy'
 import { isAvailableAsync, shareAsync } from 'expo-sharing'
 import { getDocumentAsync } from 'expo-document-picker'

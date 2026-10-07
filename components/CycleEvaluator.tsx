@@ -13,13 +13,13 @@ export const CycleEvaluator = () => {
   const [newSalary, setNewSalary] = useState('')
 
   useEffect(() => {
-    // Si no hay ciclo, o es modo libre, o no hay fecha de inicio, nos apagamos.
+    // Si no hay ciclo, o es modo libre, o no hay fecha de inicio, se apaga
     if (!cycleMode || cycleMode === 'free' || !cycleStartDate) return
 
     const start = new Date(cycleStartDate)
     const today = new Date()
     
-    // Calculamos la fecha del próximo corte
+    // Calculo de la fecha del próximo corte
     const nextDate = new Date(start)
     if (cycleMode === 'monthly') {
       nextDate.setMonth(nextDate.getMonth() + 1)
@@ -27,13 +27,13 @@ export const CycleEvaluator = () => {
       nextDate.setDate(nextDate.getDate() + 15)
     }
 
-    // Limpiamos las horas para comparar solo los días exactos
+    // se limpia las horas para comparar solo los días exactos
     today.setHours(0, 0, 0, 0)
     nextDate.setHours(0, 0, 0, 0)
 
     // Si hoy es igual o mayor a la fecha de pago, mostramos el modal
     if (today.getTime() >= nextDate.getTime()) {
-      setNewSalary(baseSalary.toString()) // Pre-llenamos con el sueldo anterior
+      setNewSalary(baseSalary.toString()) // Pre-llenado con el sueldo anterior
       setIsVisible(true)
     }
   }, [cycleMode, cycleStartDate, baseSalary])
@@ -46,9 +46,6 @@ export const CycleEvaluator = () => {
   }
 
   const handleSnooze = async () => {
-    // EL TRUCO DEL DESPLAZAMIENTO TEMPORAL:
-    // Le sumamos 1 día a la fecha original. Esto empujará la validación matemática 
-    // hacia mañana sin necesidad de crear columnas de "estado" en la DB.
     const shiftedStart = new Date(cycleStartDate!)
     shiftedStart.setDate(shiftedStart.getDate() + 1)
     

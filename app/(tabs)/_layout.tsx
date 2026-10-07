@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import { withLayoutContext } from 'expo-router'
-import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs'
+import { createMaterialTopTabNavigator } from 'expo-router/js-top-tabs'
 import { Ionicons } from '@expo/vector-icons'
 import { COLORS } from '@/constants/theme'
 import { GlobalSheet } from '@/components/GlobalSheet'

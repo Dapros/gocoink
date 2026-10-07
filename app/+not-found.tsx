@@ -19,7 +19,7 @@ export default function NotFoundScreen() {
       padding: 24
     }}>
       <Image 
-        source={require('@/assets/images/NotFound.avif')}
+        source={require('@/assets/images/NotFound.png')}
         style={{
           width: screenWidth * 0.7,
           height: screenWidth * 0.7,

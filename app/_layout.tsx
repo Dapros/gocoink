@@ -1,10 +1,9 @@
 import 'react-native-gesture-handler'
-import React from 'react'
 import { Stack } from 'expo-router'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { TouchableOpacity } from 'react-native'
 import { Image } from 'expo-image'
-import { Ionicons } from '@expo/vector-icons'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { COLORS } from '@/constants/theme'
 
 export default function RootLayout() {
@@ -24,7 +23,7 @@ export default function RootLayout() {
             title: 'GoCoink',
             headerLeft: () => (
               <Image 
-                source={require('./../assets/images/GoCoink.avif')} 
+                source={require('./../assets/images/GoCoink.png')} 
                 contentFit="contain" // resizeMode='contain' <-- descontinuado ahora se usa Image de expo
                 transition={500}
                 style={{ 

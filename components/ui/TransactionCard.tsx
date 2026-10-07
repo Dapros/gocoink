@@ -40,7 +40,7 @@ export const TransactionCard = ({ transaction, onLongPress }: TransactionCardPro
         borderColor: COLORS.border,
       }}
     >
-      {/* 1. Header  */}
+      {/* Header  */}
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
         <Text style={{ color: typeColor, fontWeight: 'bold', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>
           {typeText}
@@ -50,7 +50,7 @@ export const TransactionCard = ({ transaction, onLongPress }: TransactionCardPro
         </Text>
       </View>
 
-      {/* 2 el body con la descripcion con truncate con 2 lineas */}
+      {/* el body con la descripcion con truncate con 2 lineas */}
       <Text
         numberOfLines={2}
         style={{
@@ -64,7 +64,7 @@ export const TransactionCard = ({ transaction, onLongPress }: TransactionCardPro
         {transaction.description}
       </Text>
 
-      {/* 2. el mini footer con el metodo, monto y categoria */}
+      {/* el mini footer con el metodo, monto y categoria */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         
         {/* Izquierda metodo de pago y monto */}

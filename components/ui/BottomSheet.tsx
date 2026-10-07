@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react"
 import { Modal, View, TouchableOpacity, KeyboardAvoidingView, Platform, StyleSheet, Dimensions, Animated, PanResponder } from 'react-native'
 import { COLORS } from "@/constants/theme"
 
-// Obtenemos la altura real de la pantalla
+// se Obtiene la altura real de la pantalla
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 
 interface BottomSheetProps {
@@ -14,7 +14,7 @@ interface BottomSheetProps {
 export const BottomSheet = ({ visible, onClose, children }: BottomSheetProps) => {
   const [internalVisible, setInternalVisible] = useState(false)
   
-  // Usamos el motor nativo Animated en lugar de Reanimated
+  // Se usa el motor nativo Animated en lugar de Reanimated
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current
   const backdropOpacity = useRef(new Animated.Value(0)).current
   const [sheetHeight, setSheetHeight] = useState(0)

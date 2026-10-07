@@ -27,7 +27,7 @@ export default function HomeScreen() {
   const [cycleOffset, setCycleOffset] = useState(0)
 
   const fetchTransactions = async () => {
-    // FIX CRÍTICO: Si no hay perfil activo (App Vacia en Onboarding), abortamos la búsqueda
+    // FIX CRÍTICO: Si no hay perfil activo (App Vacia en Onboarding), se cancela la búsqueda
     if (!currentDb || currentDb === '') return 
 
     try {
@@ -61,7 +61,7 @@ export default function HomeScreen() {
     // ciclo correspondiente según el puntero del navegador
     const currentCycleData = cycles[cycleOffset]
 
-    // Si se cambia de perfil y la data de ciclos de Zustand aún está cargando, evitamos cálculos erróneos
+    // Si se cambia de perfil y la data de ciclos de Zustand aún está cargando, se evitara cálculos erróneos
     if (!currentCycleData) {
       return {
         groupedTransactions: [],

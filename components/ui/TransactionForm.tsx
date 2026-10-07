@@ -36,7 +36,6 @@ export const TransactionForm = ({ initialData, onCancel, onSave }: TransactionFo
       setCategoryId(initialData.categoryId)
       setPaymentMethodId(initialData.paymentMethodId)
     } else {
-      // Opcional: auto-seleccionar la primera opción por defecto si es modo "Crear"
       if (categories.length > 0) setCategoryId(categories[0].value)
       if (paymentMethods.length > 0) setPaymentMethodId(paymentMethods[0].value)
     }

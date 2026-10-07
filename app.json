@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "frontend-gocoink",
+    "name": "GoCoink",
     "slug": "frontend-gocoink",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/GoCoink.avif",
+    "icon": "./assets/images/GoCoink.png",
     "scheme": "frontendgocoink",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -19,11 +19,12 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.dapros.gocoink"
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/GoCoink.png"
     },
     "plugins": [
       "expo-router",
@@ -40,11 +41,22 @@
         }
       ],
       "expo-sqlite",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-font",
+      "expo-image",
+      "expo-sharing",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ebe69b44-f37e-42a4-bc61-3bb7e3eb15cc"
+      }
     }
   }
 }
