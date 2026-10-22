@@ -109,7 +109,7 @@ export const BottomSheet = ({ visible, onClose, children }: BottomSheetProps) =>
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         
         {/* FONDO OSCURO ANIMADO */}
-        <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: backdropOpacity }]}>
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropOpacity }]}>
           <TouchableOpacity activeOpacity={1} onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} />
         </Animated.View>
         

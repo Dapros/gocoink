@@ -1,17 +1,12 @@
 import React, { useEffect } from 'react'
-import { withLayoutContext } from 'expo-router'
-import { createMaterialTopTabNavigator } from 'expo-router/js-top-tabs'
+// Layout de Material Top Tabs ya integrado con Expo Router (SDK 58)
+import SwipeableTabs from 'expo-router/js-top-tabs'
 import { Ionicons } from '@expo/vector-icons'
 import { COLORS } from '@/constants/theme'
 import { GlobalSheet } from '@/components/GlobalSheet'
 import { OnboardingSetup } from '@/components/OnboardingSetup'
 import { CycleEvaluator } from '@/components/CycleEvaluator'
 import { useSettingsStore } from '@/store/useSettingsStore'
-
-// Configuracion del motor de Material Tob Tabs
-const { Navigator } = createMaterialTopTabNavigator()
-const SwipeableTabs = withLayoutContext(Navigator)
-
 
 export default function TabLayout() {
   const { loadSettings, isLoaded, cycleMode } = useSettingsStore()
@@ -60,11 +55,11 @@ export default function TabLayout() {
           name="index"
           options={{
             title: 'Inicio',
-            tabBarIcon: ({ focused, color }: { focused: boolean; color: string }) => (
-              <Ionicons 
-                name={focused ? "home" : "home-outline"} 
+            tabBarIcon: ({ focused, color }) => (
+              <Ionicons
+                name={focused ? "home" : "home-outline"}
                 size={24} 
-                color={color} 
+                color={color as string}
               />
             ),
           }}
@@ -73,11 +68,11 @@ export default function TabLayout() {
           name="plan"
           options={{
             title: 'Mi Plan',
-            tabBarIcon: ({ focused, color }: { focused: boolean; color: string }) => (
-              <Ionicons 
-                name={focused ? "wallet" : "wallet-outline"} 
+            tabBarIcon: ({ focused, color }) => (
+              <Ionicons
+                name={focused ? "wallet" : "wallet-outline"}
                 size={24} 
-                color={color} 
+                color={color as string}
               />
             ),
           }}

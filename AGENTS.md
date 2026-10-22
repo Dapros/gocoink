@@ -2,7 +2,7 @@
 
 ## 1. Antes de escribir código
 
-- Este proyecto usa **Expo SDK 57**. Las APIs cambian entre versiones: consulta la documentación de esa versión en https://docs.expo.dev/versions/v57.0.0/ y no te fíes de ejemplos de SDKs anteriores.
+- Este proyecto usa **Expo SDK 58**. Las APIs cambian entre versiones: consulta la documentación de esa versión en https://docs.expo.dev/versions/v58.0.0/ y no te fíes de ejemplos de SDKs anteriores.
 - Gestor de paquetes: **Bun** (`bun.lock`).
   - `bun install` instala las dependencias.
   - `bun start` (o `bun run android` / `bun run ios` o para expo go `bunx expo start` ) arranca la app.
@@ -30,8 +30,8 @@ Flujo de negocio:
 
 | Área | Tecnología |
 |---|---|
-| Framework | Expo SDK 57 · React Native 0.86 · React 19.2 |
-| Navegación | Expo Router (rutas por archivos) + Material Top Tabs abajo y deslizables |
+| Framework | Expo SDK 58 · React Native 0.88 (New Architecture obligatoria) · React 19.3 |
+| Navegación | Expo Router (rutas por archivos) + `TopTabs` de `expo-router/js-top-tabs`, abajo y deslizables |
 | Lenguaje | TypeScript 6 en modo estricto |
 | Estado | Zustand 5 (+ AsyncStorage) |
 | Base de datos | `expo-sqlite` |
