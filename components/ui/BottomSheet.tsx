@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from "react"
-import { Modal, View, TouchableOpacity, KeyboardAvoidingView, Platform, StyleSheet, Dimensions, Animated, PanResponder } from 'react-native'
+import React, { useEffect, useMemo, useState } from "react"
+import { Modal, View, TouchableOpacity, KeyboardAvoidingView, Platform, StyleSheet, Dimensions, Animated, PanResponder, useAnimatedValue } from 'react-native'
 import { COLORS } from "@/constants/theme"
 
 // se Obtiene la altura real de la pantalla
@@ -15,8 +15,8 @@ export const BottomSheet = ({ visible, onClose, children }: BottomSheetProps) =>
   const [internalVisible, setInternalVisible] = useState(false)
   
   // Se usa el motor nativo Animated en lugar de Reanimated
-  const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current
-  const backdropOpacity = useRef(new Animated.Value(0)).current
+  const translateY = useAnimatedValue(SCREEN_HEIGHT)
+  const backdropOpacity = useAnimatedValue(0)
   const [sheetHeight, setSheetHeight] = useState(0)
 
   // Función para abrir suavemente
@@ -28,9 +28,11 @@ export const BottomSheet = ({ visible, onClose, children }: BottomSheetProps) =>
     }).start()
   }
 
+  // Montar el Modal en cuanto se pide abrir; el desmontaje espera a que termine la animación de cierre
+  if (visible && !internalVisible) setInternalVisible(true)
+
   useEffect(() => {
     if (visible) {
-      setInternalVisible(true)
       Animated.timing(backdropOpacity, {
         toValue: 1,
         duration: 200,
@@ -72,7 +74,8 @@ export const BottomSheet = ({ visible, onClose, children }: BottomSheetProps) =>
   }
 
   // EL REEMPLAZO A PRUEBA DE CRASHES: PanResponder nativo
-  const panResponder = useRef(
+  // Se recrea cuando cambia sheetHeight; con useRef se quedaba con sheetHeight = 0 y cualquier arrastre cerraba la hoja
+  const panResponder = useMemo(() =>
     PanResponder.create({
       // Solo captura el gesto si el usuario mueve el dedo más de 5 píxeles (evita toques accidentales)
       onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 5,
@@ -94,8 +97,9 @@ export const BottomSheet = ({ visible, onClose, children }: BottomSheetProps) =>
           slideIn()
         }
       }
-    })
-  ).current
+    }),
+    [sheetHeight, onClose]
+  )
 
   if (!internalVisible) return null
 

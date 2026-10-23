@@ -26,18 +26,6 @@ export default function HomeScreen() {
   const [rawTransactions, setRawTransactions] = useState<DBTransactionRow[]>([])
   const [cycleOffset, setCycleOffset] = useState(0)
 
-  const fetchTransactions = async () => {
-    // FIX CRÍTICO: Si no hay perfil activo (App Vacia en Onboarding), se cancela la búsqueda
-    if (!currentDb || currentDb === '') return 
-
-    try {
-      const rawData = await DatabaseService.getAllTransactions()
-      setRawTransactions(rawData)
-    } catch (error) {
-      console.error("Error al cargar SQLite:", error)
-    }
-  }
-
   useEffect(() => {
     // FIX CRÍTICO: Solo se carga los catálogos si ya existe un perfil confirmado
     if (currentDb && currentDb !== '') {
@@ -45,13 +33,25 @@ export default function HomeScreen() {
     }
   }, [currentDb])
 
-  useEffect(() => {
-    // FIX CRÍTICO: Bloqueo la ejecución fantasma
-    if (!currentDb || currentDb === '') return 
-    
+  // Al cambiar de perfil o tras guardar una transacción se limpia la lista y se vuelve al ciclo actual mientras recarga
+  const fetchKey = `${currentDb}|${refreshKey}`
+  const [loadedKey, setLoadedKey] = useState(fetchKey)
+  if (loadedKey !== fetchKey) {
+    setLoadedKey(fetchKey)
     setRawTransactions([])
-    setCycleOffset(0)      
-    fetchTransactions()
+    setCycleOffset(0)
+  }
+
+  useEffect(() => {
+    // FIX CRÍTICO: Si no hay perfil activo (App Vacia en Onboarding), se cancela la búsqueda
+    if (!currentDb || currentDb === '') return
+
+    // Si cambia el perfil antes de que termine la consulta, se descarta la respuesta vieja
+    let cancelled = false
+    DatabaseService.getAllTransactions()
+      .then((rawData) => { if (!cancelled) setRawTransactions(rawData) })
+      .catch((error) => console.error("Error al cargar SQLite:", error))
+    return () => { cancelled = true }
   }, [currentDb, refreshKey])
 
   // Límites del viaje en el tiempo controlados por la longitud del array

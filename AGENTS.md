@@ -6,7 +6,8 @@
 - Gestor de paquetes: **Bun** (`bun.lock`).
   - `bun install` instala las dependencias.
   - `bun start` (o `bun run android` / `bun run ios` o para expo go `bunx expo start` ) arranca la app.
-  - `bun run lint` ejecuta `expo lint`. Es la única comprobación automática.
+  - `bun run lint` ejecuta `expo lint`. Debe terminar con 0 errores; los warnings existentes se toleran.
+  - `bunx tsc --noEmit` comprueba los tipos.
 - No hay tests. Verifica los cambios con `bun run lint` y en la app.
 
 ## 2. Qué es GoCoink
@@ -135,6 +136,12 @@ Los `.db` de los usuarios ya existen. `CREATE TABLE IF NOT EXISTS` **no** modifi
 - **Estilos**: usa estilos inline o `StyleSheet` nativos. El proyecto no usa NativeWind ni Tailwind.
 - **Imágenes**: usa `Image` de `expo-image` con `contentFit`, no la de `react-native`.
 - **Animaciones**: usa `Animated` y `PanResponder` de React Native. No uses Reanimated sin acordarlo antes (está instalado pero no se usa).
+  - Crea los valores con `useAnimatedValue(x)`, no con `useRef(new Animated.Value(x)).current`.
+  - Crea los `PanResponder` con `useMemo` y sus dependencias, para que no se queden con valores del primer render.
+- **React Compiler** (activado en `app.json`): no llames a `setState` de forma síncrona dentro de un `useEffect` ni leas refs durante el render.
+  - Para un valor que sale de props o del store, calcúlalo en el render (por ejemplo, `editado ?? valorDelStore`).
+  - Para reiniciar estado cuando cambia una clave, compáralo en el render (`if (prevKey !== key) { ... }`) o usa `key` en el componente.
+  - Para cargas asíncronas dentro de un efecto, usa un flag `cancelled` en la limpieza.
 - **Imports**: usa siempre el alias `@/` (por ejemplo, `import { COLORS } from '@/constants/theme'`).
 - **Moneda**: dale formato con `.toLocaleString('es-CO')`.
 - **Validación**: valida los formularios con zod. Los schemas que se compartan van en `@/types`.

@@ -32,19 +32,26 @@ export default function PlanScreen() {
 
   const { refreshKey } = useSheetStore() // Para escuchar cambios en transacciones desde el home
 
-  const [draftMode, setDraftMode] = useState<PlanType>('monthly')
-  const [draftSalary, setDraftSalary] = useState('')
+  // null = sin editar; el borrador muestra el plan guardado del perfil activo
+  const [editedMode, setDraftMode] = useState<PlanType | null>(null)
+  const [editedSalary, setDraftSalary] = useState<string | null>(null)
+  const draftMode = editedMode ?? cycleMode ?? 'monthly'
+  const draftSalary = editedSalary ?? baseSalary.toString()
+
+  // Descarta el borrador cuando cambia el perfil o el plan guardado
+  const savedPlanKey = `${currentDb}|${cycleMode}|${baseSalary}`
+  const [draftBaseKey, setDraftBaseKey] = useState(savedPlanKey)
+  if (draftBaseKey !== savedPlanKey) {
+    setDraftBaseKey(savedPlanKey)
+    setDraftMode(null)
+    setDraftSalary(null)
+  }
   // Estado para el renombrado de base de dato
   const [isRenameModalVisible, setIsRenameModalVisible] = useState(false)
   const [newProfileName, setNewProfileName] = useState('')
 
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false)
   const [newCreateProfileName, setNewCreateProfileName] = useState('')
-
-  useEffect(() => {
-    if (cycleMode) setDraftMode(cycleMode)
-    setDraftSalary(baseSalary.toString())
-  }, [cycleMode, baseSalary, currentDb])
 
   useEffect(() => {
     refreshDatabaseList()

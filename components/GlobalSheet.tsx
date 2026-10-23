@@ -85,7 +85,8 @@ export const GlobalSheet = () => {
     <BottomSheet visible={isOpen} onClose={closeSheet}>
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {mode === 'details' ? renderDetails() : (
-          <TransactionForm 
+          <TransactionForm
+            key={selectedTx?.id ?? 'new'}
             initialData={selectedTx}
             onCancel={closeSheet}
             onSave={handleSave} 
