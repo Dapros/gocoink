@@ -107,7 +107,9 @@ Toda fecha nueva se guarda en la **hora local del dispositivo**. Una transacció
 
 Los `.db` de los usuarios ya existen. `CREATE TABLE IF NOT EXISTS` **no** modifica tablas que ya existen, así que una columna nueva nunca les llegaría.
 
-- Todo cambio de esquema sube `PRAGMA user_version` y añade un paso de migración incremental en `DatabaseService.initialize()` (`if (version < N) { ALTER ...; PRAGMA user_version = N }`).
+- Todo cambio de esquema se añade como un string SQL **al final** del array `MIGRATIONS` en `services/database.ts`. `runMigrations` (que se llama desde `initialize()`) aplica en orden los pasos pendientes, cada uno en su transacción, y sube `PRAGMA user_version`.
+- Nunca edites, borres ni reordenes un paso que ya exista: ya se ejecutó en los `.db` de los usuarios.
+- Si añades una columna nueva, añádela también al `CREATE TABLE`, para que las bases nuevas nazcan completas. Escribe la migración de forma que no falle sobre una base recién creada (por ejemplo, un `ALTER TABLE ... ADD COLUMN` de una columna que ya está en el `CREATE` sí fallaría). Si dudas, no la pongas en el `CREATE` y deja que la migración la añada.
 - No edites un `CREATE TABLE` existente esperando que se aplique a bases ya creadas.
 - Si cambias columnas, actualiza también los tipos `Raw*` y `ExcelService` (exportar e importar).
 
