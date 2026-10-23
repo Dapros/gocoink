@@ -1,6 +1,18 @@
 import { DBTransactionRow, GroupedTransactions } from "@/types"
 import { FilterType, FilterTime, FilterMethod } from "@/store/useFilterStore"
 
+const pad = (n: number) => String(n).padStart(2, '0')
+
+// Fecha ISO en hora local con offset (ej. 2026-10-21T23:50:00-05:00). toISOString() usa UTC y en Colombia corre al día siguiente después de las 7 p. m.
+export const toLocalISOString = (date: Date = new Date()): string => {
+  const offset = -date.getTimezoneOffset()
+  const sign = offset >= 0 ? '+' : '-'
+  const abs = Math.abs(offset)
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}` +
+    `${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`
+}
+
 interface ProcessOptions {
   type: FilterType
   time: FilterTime

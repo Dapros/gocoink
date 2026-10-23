@@ -3,6 +3,7 @@ import { View, Text, Modal, KeyboardAvoidingView, Platform, TouchableOpacity } f
 import { Ionicons } from '@expo/vector-icons'
 import { COLORS } from '@/constants/theme'
 import { useSettingsStore } from '@/store/useSettingsStore'
+import { toLocalISOString } from '@/utils/dateHelpers'
 import { Input } from './ui/Input'
 import { Button } from './ui/Button'
 
@@ -39,7 +40,7 @@ export const CycleEvaluator = () => {
   }, [cycleMode, cycleStartDate, baseSalary])
 
   const handleSave = async () => {
-    const today = new Date().toISOString()
+    const today = toLocalISOString()
     // Guardamos el nuevo sueldo y reiniciamos el ciclo a partir de HOY
     await saveSettings(cycleMode!, Number(newSalary), today)
     setIsVisible(false)
@@ -49,7 +50,7 @@ export const CycleEvaluator = () => {
     const shiftedStart = new Date(cycleStartDate!)
     shiftedStart.setDate(shiftedStart.getDate() + 1)
     
-    await saveSettings(cycleMode!, baseSalary, shiftedStart.toISOString())
+    await saveSettings(cycleMode!, baseSalary, toLocalISOString(shiftedStart))
     setIsVisible(false)
   }
 

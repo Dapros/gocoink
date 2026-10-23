@@ -99,7 +99,7 @@ utils/
 Toda fecha nueva se guarda en la **hora local del dispositivo**. Una transacción registrada a las 11:50 p. m. del día X debe quedar en el día X, nunca en el siguiente.
 
 - **No** uses `new Date().toISOString()` para fechas nuevas. Devuelve la hora en UTC y, en Colombia (UTC-5), todo lo que se registre después de las 7 p. m. queda guardado con fecha del día siguiente.
-- Guarda las fechas en ISO con el offset local, por ejemplo `2026-10-21T23:50:00-05:00`. Hazlo con un helper compartido en `utils/dateHelpers.ts`; si no existe, créalo ahí y reutilízalo.
+- Guarda las fechas con `toLocalISOString()` de `@/utils/dateHelpers` (ISO con el offset local, por ejemplo `2026-10-21T23:50:00-05:00`). Para una fecha concreta, pásala como argumento: `toLocalISOString(fecha)`.
 - Las fechas antiguas guardadas en UTC siguen siendo válidas porque `new Date()` las interpreta bien. No las reescribas sin que se pida.
 - Para mostrar o agrupar fechas, conviértelas siempre con `new Date(...)` y los métodos locales (`getDate`, `toLocaleDateString('es-CO')`). No cortes el texto de la fecha (`split('T')`).
 
@@ -162,15 +162,7 @@ Los `.db` de los usuarios ya existen. `CREATE TABLE IF NOT EXISTS` **no** modifi
 
 - **Nunca ejecutes `bun run reset-project`**: borra la estructura del proyecto.
 - `CycleMode` en `types/index.ts` declara `'disabled'`, pero la DB y la UI usan `'free'` (`services/database.ts`, `app/(tabs)/plan.tsx`, `components/OnboardingSetup.tsx`). El valor real es `'free'`.
-- **Deuda pendiente**: el código actual todavía guarda fechas con `toISOString()` (UTC) en:
-  - `DatabaseService.insertTransaction`
-  - `calculateEndDate`
-  - `CycleEvaluator`
-  - `OnboardingSetup`
-  - `plan.tsx`
-  - `excelHelpers.ts`
-
-  Esto incumple la regla de fechas. Corrígelo solo como tarea aparte, cuando se pida.
+- Las fechas guardadas antes de `toLocalISOString` están en UTC (`...Z`) y las nuevas llevan offset (`-05:00`). `ORDER BY` en SQL ordena el texto, así que entre registros antiguos y nuevos de la misma noche el orden puede desfasarse unas horas. Para ordenar con exactitud, hazlo en JS con `new Date(...)`.
 - El filtro por método de pago (`processTransactions`) asume que `paymentMethodId === 1` es Efectivo y que cualquier otro id es un banco. Depende del orden de los datos iniciales.
 - Los valores `rgba(...)` y `#000` que aparecen en el código solo se aceptan para fondos semitransparentes de modales y sombras. Cualquier otro color sale de `COLORS`.
 - `expo-file-system` se importa desde `expo-file-system/legacy`. La API nueva tiene otra forma.

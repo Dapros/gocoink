@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button"
 import { Select } from "@/components/ui/Select"
 import { ExcelService } from "@/utils/excelHelpers"
 import { useSheetStore } from "@/store/useSheetStore"
+import { toLocalISOString } from "@/utils/dateHelpers"
 
 type PlanType = 'monthly' | 'biweekly' | 'free'
 
@@ -75,7 +76,7 @@ export default function PlanScreen() {
             text: "Sí, Guardar y Cortar",
             style: "default",
             onPress: async () => {
-              const startDate = new Date().toISOString()
+              const startDate = toLocalISOString()
               await saveSettings(draftMode, finalSalary, startDate)
               // AUTO-SWIPE: Para redirigir a la pestaña de Inicio
               router.navigate("/")
@@ -84,7 +85,7 @@ export default function PlanScreen() {
         ]
       )
     } else {
-      let startDate = cycleStartDate || new Date().toISOString()
+      let startDate = cycleStartDate || toLocalISOString()
       await saveSettings(draftMode, finalSalary, startDate)
       Alert.alert("¡Plan Actualizado!", "Tu configuración financiera ha sido guardada con éxito.")
       // AUTO-SWIPE OBLIGATORIO: También cuando guarda cambios de sueldo normales

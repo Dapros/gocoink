@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Modal, KeyboardAvoidingView, Platform } f
 import { Ionicons } from '@expo/vector-icons'
 import { COLORS } from '@/constants/theme'
 import { useSettingsStore } from '@/store/useSettingsStore'
+import { toLocalISOString } from '@/utils/dateHelpers'
 import { Input } from './ui/Input'
 import { useRouter } from 'expo-router'
 
@@ -22,7 +23,7 @@ export const OnboardingSetup = () => {
   const handleSave = async () => {
     // Si es modo libre, el salario base es 0
     const finalSalary = selectedPlan === 'free' ? 0 : Number(salary)
-    const today = new Date().toISOString()
+    const today = toLocalISOString()
 
     // Solo enviamos el nombre personalizado si la app está en modo Vacio
     const finalProfileName = isVoidApp ? profileName : undefined

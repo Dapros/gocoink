@@ -1,6 +1,7 @@
 import * as SQLite from 'expo-sqlite'
 import { documentDirectory, getInfoAsync, readDirectoryAsync, deleteAsync, moveAsync } from 'expo-file-system/legacy'
 import { DBTransactionRow, UserSettings } from '@/types'
+import { toLocalISOString } from '@/utils/dateHelpers'
 
 // variables momentaneas de memoria para controlar la concurrencia
 let dbInstance: SQLite.SQLiteDatabase | null = null
@@ -19,7 +20,7 @@ const calculateEndDate = (startDateIso: string, mode: 'monthly' | 'biweekly' | '
   } else {
     end.setMonth(end.getMonth() + 1)
   }
-  return end.toISOString()
+  return toLocalISOString(end)
 }
 
 export const DatabaseService = {
@@ -275,7 +276,7 @@ export const DatabaseService = {
   ): Promise<void> {
     const db = await this.initialize();
     
-    const now = new Date().toISOString();
+    const now = toLocalISOString();
     await db.runAsync(
       'INSERT INTO transactions (amount, type, category_id, payment_method_id, description, date) VALUES (?, ?, ?, ?, ?, ?);',
       [amount, type, categoryId, paymentMethodId, description, now]

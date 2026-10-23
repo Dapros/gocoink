@@ -3,6 +3,7 @@ import { cacheDirectory, EncodingType, writeAsStringAsync, readAsStringAsync } f
 import { isAvailableAsync, shareAsync } from 'expo-sharing'
 import { getDocumentAsync } from 'expo-document-picker'
 import { DatabaseService } from '@/services/database'
+import { toLocalISOString } from '@/utils/dateHelpers'
 import { RawCategory, RawCycle, RawPaymentMethod, RawTransaction } from '@/types'
 
 // Transforma la data en formato XML compatible con múltiples pestañas en Excel
@@ -139,7 +140,7 @@ export const ExcelService = {
       const cyclesRows = parseSheetRows('Ciclos')
       let lastMode = 'free'
       let lastSalary = 0
-      let lastStart = new Date().toISOString()
+      let lastStart = toLocalISOString()
       
       for (const row of cyclesRows) {
         if (row.length >= 5) {
