@@ -141,7 +141,7 @@ Los `.db` de los usuarios ya existen. `CREATE TABLE IF NOT EXISTS` **no** modifi
 
 ## 7. Flujo de trabajo con git
 
-- Los agentes trabajan **solo** en la rama `agents` o en subramas creadas a partir de ella (`agents/<tarea>`). Nunca hacen commits ni push directamente a `main`.
+- Los agentes trabajan **solo** en la rama `agents`, sin crear subramas. Nunca hacen commits ni push directamente a `main`.
 - **Pregunta siempre antes de hacer merge a `main`.**
 - Commits con formato Conventional Commits y la descripción en español:
   - `feat: agrega filtro por categoría en FilterBar`
