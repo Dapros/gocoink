@@ -1,5 +1,5 @@
 import * as SQLite from 'expo-sqlite'
-import { getInfoAsync, readDirectoryAsync, deleteAsync, moveAsync } from 'expo-file-system/legacy'
+import { documentDirectory, getInfoAsync, readDirectoryAsync, deleteAsync, moveAsync } from 'expo-file-system/legacy'
 import { DBTransactionRow, UserSettings } from '@/types'
 import { toLocalISOString } from '@/utils/dateHelpers'
 
@@ -70,9 +70,8 @@ export const DatabaseService = {
   },
 
   // Obtener la ruta del directorio nativo de SQLite de la app
-  // La carpeta la decide expo-sqlite (en Expo Go no coincide con documentDirectory); se pasa a URI para expo-file-system
   getSQLiteDirectory() {
-    return `file://${SQLite.defaultDatabaseDirectory}/`
+    return `${documentDirectory}SQLite/`
   },
 
   async initialize() {
