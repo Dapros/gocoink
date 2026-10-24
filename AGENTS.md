@@ -175,4 +175,6 @@ Los `.db` de los usuarios ya existen. `CREATE TABLE IF NOT EXISTS` **no** modifi
 - El filtro por método de pago (`processTransactions`) asume que `paymentMethodId === 1` es Efectivo y que cualquier otro id es un banco. Depende del orden de los datos iniciales.
 - Los valores `rgba(...)` y `#000` que aparecen en el código solo se aceptan para fondos semitransparentes de modales y sombras. Cualquier otro color sale de `COLORS`.
 - `expo-file-system` se importa desde `expo-file-system/legacy`. La API nueva tiene otra forma.
+- **La gestión de perfiles (listar, renombrar y borrar `.db`) no funciona en Expo Go**: allí `expo-sqlite` y `expo-file-system` están aislados en carpetas distintas, y el select de perfiles sale vacío. En un development o production build funciona, porque `${documentDirectory}SQLite/` es la carpeta por defecto de `expo-sqlite`. Prueba estas funciones en un development build (`bunx expo run:android`).
+  - Ya se intentó y **no** sirve: listar `SQLite.defaultDatabaseDirectory` (`isn't readable`) ni pasar `directory` a `openDatabaseAsync` (`expo-file-system` sigue sin ver los archivos).
 - El README menciona Tailwind/NativeWind, pero el proyecto no los usa.
