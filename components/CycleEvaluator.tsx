@@ -1,26 +1,28 @@
-import React, { useEffect, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { View, Text, Modal, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { COLORS } from '@/constants/theme'
 import { useSettingsStore } from '@/store/useSettingsStore'
+import { toLocalISOString } from '@/utils/dateHelpers'
 import { Input } from './ui/Input'
 import { Button } from './ui/Button'
 
 export const CycleEvaluator = () => {
   const { cycleMode, baseSalary, cycleStartDate, saveSettings } = useSettingsStore()
   
-  const [isVisible, setIsVisible] = useState(false)
-  const [newSalary, setNewSalary] = useState('')
+  // null = el usuario no ha editado el sueldo; se pre-llena con el sueldo anterior
+  const [editedSalary, setEditedSalary] = useState<string | null>(null)
+  const newSalary = editedSalary ?? baseSalary.toString()
 
-  useEffect(() => {
+  // El modal se muestra mientras el corte esté vencido; al guardar o posponer cambia cycleStartDate y se recalcula solo
+  const isVisible = useMemo(() => {
     // Si no hay ciclo, o es modo libre, o no hay fecha de inicio, se apaga
-    if (!cycleMode || cycleMode === 'free' || !cycleStartDate) return
+    if (!cycleMode || cycleMode === 'free' || !cycleStartDate) return false
 
-    const start = new Date(cycleStartDate)
     const today = new Date()
-    
+
     // Calculo de la fecha del próximo corte
-    const nextDate = new Date(start)
+    const nextDate = new Date(cycleStartDate)
     if (cycleMode === 'monthly') {
       nextDate.setMonth(nextDate.getMonth() + 1)
     } else if (cycleMode === 'biweekly') {
@@ -32,25 +34,21 @@ export const CycleEvaluator = () => {
     nextDate.setHours(0, 0, 0, 0)
 
     // Si hoy es igual o mayor a la fecha de pago, mostramos el modal
-    if (today.getTime() >= nextDate.getTime()) {
-      setNewSalary(baseSalary.toString()) // Pre-llenado con el sueldo anterior
-      setIsVisible(true)
-    }
-  }, [cycleMode, cycleStartDate, baseSalary])
+    return today.getTime() >= nextDate.getTime()
+  }, [cycleMode, cycleStartDate])
 
   const handleSave = async () => {
-    const today = new Date().toISOString()
+    const today = toLocalISOString()
     // Guardamos el nuevo sueldo y reiniciamos el ciclo a partir de HOY
     await saveSettings(cycleMode!, Number(newSalary), today)
-    setIsVisible(false)
+    setEditedSalary(null)
   }
 
   const handleSnooze = async () => {
     const shiftedStart = new Date(cycleStartDate!)
     shiftedStart.setDate(shiftedStart.getDate() + 1)
-    
-    await saveSettings(cycleMode!, baseSalary, shiftedStart.toISOString())
-    setIsVisible(false)
+
+    await saveSettings(cycleMode!, baseSalary, toLocalISOString(shiftedStart))
   }
 
   if (!isVisible) return null
@@ -98,7 +96,7 @@ export const CycleEvaluator = () => {
             label="Ingreso para este ciclo (COP)"
             keyboardType="numeric"
             value={newSalary}
-            onChangeText={setNewSalary}
+            onChangeText={setEditedSalary}
             autoFocus
           />
 

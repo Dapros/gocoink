@@ -1,12 +1,28 @@
 import * as SQLite from 'expo-sqlite'
 import { documentDirectory, getInfoAsync, readDirectoryAsync, deleteAsync, moveAsync } from 'expo-file-system/legacy'
 import { DBTransactionRow, UserSettings } from '@/types'
+import { toLocalISOString } from '@/utils/dateHelpers'
 
 // variables momentaneas de memoria para controlar la concurrencia
 let dbInstance: SQLite.SQLiteDatabase | null = null
 let dbInitPromise: Promise<SQLite.SQLiteDatabase> | null = null
 // Nombre de la base de datos por defecto
 let currentDbName = 'gocoink_v1.db'
+
+// Migraciones del esquema: el paso en la posición i deja la DB en user_version = i + 1.
+// Solo se añaden pasos al final; nunca se editan ni reordenan los existentes porque ya corrieron en los .db de los usuarios.
+const MIGRATIONS: string[] = []
+
+// Aplica en orden las migraciones pendientes; cada paso va en su transacción junto con su user_version
+const runMigrations = async (db: SQLite.SQLiteDatabase) => {
+  const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version')
+  for (let version = row?.user_version ?? 0; version < MIGRATIONS.length; version++) {
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(MIGRATIONS[version])
+      await db.execAsync(`PRAGMA user_version = ${version + 1}`)
+    })
+  }
+}
 
 // Helper interno para calcular la fecha de finalización exacta de un ciclo
 const calculateEndDate = (startDateIso: string, mode: 'monthly' | 'biweekly' | 'free') => {
@@ -19,7 +35,7 @@ const calculateEndDate = (startDateIso: string, mode: 'monthly' | 'biweekly' | '
   } else {
     end.setMonth(end.getMonth() + 1)
   }
-  return end.toISOString()
+  return toLocalISOString(end)
 }
 
 export const DatabaseService = {
@@ -116,6 +132,8 @@ export const DatabaseService = {
           INSERT OR IGNORE INTO user_settings (id, cycle_mode, base_salary, cycle_start_date) 
           VALUES (1, NULL, 0, NULL);
         `)
+
+        await runMigrations(db)
 
         // Sincronización inicial: Si la tabla de ciclos está vacía pero el usuario ya tenía configuración
         const cycleCheck = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM cycles')
@@ -275,7 +293,7 @@ export const DatabaseService = {
   ): Promise<void> {
     const db = await this.initialize();
     
-    const now = new Date().toISOString();
+    const now = toLocalISOString();
     await db.runAsync(
       'INSERT INTO transactions (amount, type, category_id, payment_method_id, description, date) VALUES (?, ?, ?, ?, ?, ?);',
       [amount, type, categoryId, paymentMethodId, description, now]

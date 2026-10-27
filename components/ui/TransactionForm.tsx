@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState } from "react"
 import { View, Text, TouchableOpacity } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { COLORS } from "@/constants/theme"
@@ -21,29 +21,21 @@ interface TransactionFormProps {
 export const TransactionForm = ({ initialData, onCancel, onSave }: TransactionFormProps) => {
   const { categories, paymentMethods } = useSheetStore()
 
-  const [description, setDescription] = useState('')
-  const [type, setType] = useState<'expense' | 'income'>('expense')
-  const [amount, setAmount] = useState('')
-  const [categoryId, setCategoryId] = useState<number | string | null>(null)
-  const [paymentMethodId, setPaymentMethodId] = useState<number | string | null>(null)
+  // El estado nace de initialData; GlobalSheet monta el formulario con key para reiniciarlo al cambiar de transacción
+  const [description, setDescription] = useState(initialData?.description ?? '')
+  const [type, setType] = useState<'expense' | 'income'>(initialData?.type ?? 'expense')
+  const [amount, setAmount] = useState(initialData?.amount.toString() ?? '')
+  const [categoryId, setCategoryId] = useState<number | string | null>(initialData?.categoryId ?? null)
+  const [paymentMethodId, setPaymentMethodId] = useState<number | string | null>(initialData?.paymentMethodId ?? null)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  useEffect(() => {
-    if (initialData) {
-      setDescription(initialData.description)
-      setType(initialData.type)
-      setAmount(initialData.amount.toString())
-      setCategoryId(initialData.categoryId)
-      setPaymentMethodId(initialData.paymentMethodId)
-    } else {
-      if (categories.length > 0) setCategoryId(categories[0].value)
-      if (paymentMethods.length > 0) setPaymentMethodId(paymentMethods[0].value)
-    }
-  }, [initialData, categories, paymentMethods])
+  // Sin selección propia se usa la primera opción; los catálogos pueden llegar después del montaje
+  const selectedCategoryId = categoryId ?? categories[0]?.value ?? null
+  const selectedPaymentMethodId = paymentMethodId ?? paymentMethods[0]?.value ?? null
 
   const handleSave = () => {
     const result = FormSchema.safeParse({
-      description, type, amount: Number(amount), categoryId: Number(categoryId), paymentMethodId: Number(paymentMethodId),
+      description, type, amount: Number(amount), categoryId: Number(selectedCategoryId), paymentMethodId: Number(selectedPaymentMethodId),
     })
 
     if (!result.success) {
@@ -126,7 +118,7 @@ export const TransactionForm = ({ initialData, onCancel, onSave }: TransactionFo
         <Select 
           label="Categoría" 
           options={categories} 
-          selectedValue={categoryId} 
+          selectedValue={selectedCategoryId}
           onSelect={setCategoryId} 
           error={errors.categoryId} 
         />
@@ -140,7 +132,7 @@ export const TransactionForm = ({ initialData, onCancel, onSave }: TransactionFo
         <Select 
           label="Método de registro" 
           options={paymentMethods} 
-          selectedValue={paymentMethodId} 
+          selectedValue={selectedPaymentMethodId}
           onSelect={setPaymentMethodId} 
           error={errors.paymentMethodId} 
         />

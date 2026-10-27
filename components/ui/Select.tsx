@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { View, Text, TouchableOpacity, Modal, FlatList, Animated } from 'react-native'
+import React, { useState, useEffect } from 'react'
+import { View, Text, TouchableOpacity, Modal, FlatList, Animated, useAnimatedValue } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { COLORS } from '@/constants/theme'
@@ -24,7 +24,7 @@ export const Select = ({
 } : SelectProps) => {
   const [isOpen, setIsOpen] = useState(false)
 
-  const rotateAnim = useRef(new Animated.Value(0)).current
+  const rotateAnim = useAnimatedValue(0)
   useEffect(() => {
     Animated.timing(rotateAnim, {
       toValue: isOpen ? 1 : 0,

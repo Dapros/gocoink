@@ -2,11 +2,12 @@
 
 ## 1. Antes de escribir código
 
-- Este proyecto usa **Expo SDK 57**. Las APIs cambian entre versiones: consulta la documentación de esa versión en https://docs.expo.dev/versions/v57.0.0/ y no te fíes de ejemplos de SDKs anteriores.
+- Este proyecto usa **Expo SDK 58**. Las APIs cambian entre versiones: consulta la documentación de esa versión en https://docs.expo.dev/versions/v58.0.0/ y no te fíes de ejemplos de SDKs anteriores.
 - Gestor de paquetes: **Bun** (`bun.lock`).
   - `bun install` instala las dependencias.
   - `bun start` (o `bun run android` / `bun run ios` o para expo go `bunx expo start` ) arranca la app.
-  - `bun run lint` ejecuta `expo lint`. Es la única comprobación automática.
+  - `bun run lint` ejecuta `expo lint`. Debe terminar con 0 errores; los warnings existentes se toleran.
+  - `bunx tsc --noEmit` comprueba los tipos.
 - No hay tests. Verifica los cambios con `bun run lint` y en la app.
 
 ## 2. Qué es GoCoink
@@ -30,8 +31,8 @@ Flujo de negocio:
 
 | Área | Tecnología |
 |---|---|
-| Framework | Expo SDK 57 · React Native 0.86 · React 19.2 |
-| Navegación | Expo Router (rutas por archivos) + Material Top Tabs abajo y deslizables |
+| Framework | Expo SDK 58 · React Native 0.88 (New Architecture obligatoria) · React 19.3 |
+| Navegación | Expo Router (rutas por archivos) + `TopTabs` de `expo-router/js-top-tabs`, abajo y deslizables |
 | Lenguaje | TypeScript 6 en modo estricto |
 | Estado | Zustand 5 (+ AsyncStorage) |
 | Base de datos | `expo-sqlite` |
@@ -99,7 +100,7 @@ utils/
 Toda fecha nueva se guarda en la **hora local del dispositivo**. Una transacción registrada a las 11:50 p. m. del día X debe quedar en el día X, nunca en el siguiente.
 
 - **No** uses `new Date().toISOString()` para fechas nuevas. Devuelve la hora en UTC y, en Colombia (UTC-5), todo lo que se registre después de las 7 p. m. queda guardado con fecha del día siguiente.
-- Guarda las fechas en ISO con el offset local, por ejemplo `2026-10-21T23:50:00-05:00`. Hazlo con un helper compartido en `utils/dateHelpers.ts`; si no existe, créalo ahí y reutilízalo.
+- Guarda las fechas con `toLocalISOString()` de `@/utils/dateHelpers` (ISO con el offset local, por ejemplo `2026-10-21T23:50:00-05:00`). Para una fecha concreta, pásala como argumento: `toLocalISOString(fecha)`.
 - Las fechas antiguas guardadas en UTC siguen siendo válidas porque `new Date()` las interpreta bien. No las reescribas sin que se pida.
 - Para mostrar o agrupar fechas, conviértelas siempre con `new Date(...)` y los métodos locales (`getDate`, `toLocaleDateString('es-CO')`). No cortes el texto de la fecha (`split('T')`).
 
@@ -107,7 +108,9 @@ Toda fecha nueva se guarda en la **hora local del dispositivo**. Una transacció
 
 Los `.db` de los usuarios ya existen. `CREATE TABLE IF NOT EXISTS` **no** modifica tablas que ya existen, así que una columna nueva nunca les llegaría.
 
-- Todo cambio de esquema sube `PRAGMA user_version` y añade un paso de migración incremental en `DatabaseService.initialize()` (`if (version < N) { ALTER ...; PRAGMA user_version = N }`).
+- Todo cambio de esquema se añade como un string SQL **al final** del array `MIGRATIONS` en `services/database.ts`. `runMigrations` (que se llama desde `initialize()`) aplica en orden los pasos pendientes, cada uno en su transacción, y sube `PRAGMA user_version`.
+- Nunca edites, borres ni reordenes un paso que ya exista: ya se ejecutó en los `.db` de los usuarios.
+- Si añades una columna nueva, añádela también al `CREATE TABLE`, para que las bases nuevas nazcan completas. Escribe la migración de forma que no falle sobre una base recién creada (por ejemplo, un `ALTER TABLE ... ADD COLUMN` de una columna que ya está en el `CREATE` sí fallaría). Si dudas, no la pongas en el `CREATE` y deja que la migración la añada.
 - No edites un `CREATE TABLE` existente esperando que se aplique a bases ya creadas.
 - Si cambias columnas, actualiza también los tipos `Raw*` y `ExcelService` (exportar e importar).
 
@@ -133,6 +136,12 @@ Los `.db` de los usuarios ya existen. `CREATE TABLE IF NOT EXISTS` **no** modifi
 - **Estilos**: usa estilos inline o `StyleSheet` nativos. El proyecto no usa NativeWind ni Tailwind.
 - **Imágenes**: usa `Image` de `expo-image` con `contentFit`, no la de `react-native`.
 - **Animaciones**: usa `Animated` y `PanResponder` de React Native. No uses Reanimated sin acordarlo antes (está instalado pero no se usa).
+  - Crea los valores con `useAnimatedValue(x)`, no con `useRef(new Animated.Value(x)).current`.
+  - Crea los `PanResponder` con `useMemo` y sus dependencias, para que no se queden con valores del primer render.
+- **React Compiler** (activado en `app.json`): no llames a `setState` de forma síncrona dentro de un `useEffect` ni leas refs durante el render.
+  - Para un valor que sale de props o del store, calcúlalo en el render (por ejemplo, `editado ?? valorDelStore`).
+  - Para reiniciar estado cuando cambia una clave, compáralo en el render (`if (prevKey !== key) { ... }`) o usa `key` en el componente.
+  - Para cargas asíncronas dentro de un efecto, usa un flag `cancelled` en la limpieza.
 - **Imports**: usa siempre el alias `@/` (por ejemplo, `import { COLORS } from '@/constants/theme'`).
 - **Moneda**: dale formato con `.toLocaleString('es-CO')`.
 - **Validación**: valida los formularios con zod. Los schemas que se compartan van en `@/types`.
@@ -141,7 +150,7 @@ Los `.db` de los usuarios ya existen. `CREATE TABLE IF NOT EXISTS` **no** modifi
 
 ## 7. Flujo de trabajo con git
 
-- Los agentes trabajan **solo** en la rama `agents` o en subramas creadas a partir de ella (`agents/<tarea>`). Nunca hacen commits ni push directamente a `main`.
+- Los agentes trabajan **solo** en la rama `agents`, sin crear subramas. Nunca hacen commits ni push directamente a `main`.
 - **Pregunta siempre antes de hacer merge a `main`.**
 - Commits con formato Conventional Commits y la descripción en español:
   - `feat: agrega filtro por categoría en FilterBar`
@@ -162,16 +171,10 @@ Los `.db` de los usuarios ya existen. `CREATE TABLE IF NOT EXISTS` **no** modifi
 
 - **Nunca ejecutes `bun run reset-project`**: borra la estructura del proyecto.
 - `CycleMode` en `types/index.ts` declara `'disabled'`, pero la DB y la UI usan `'free'` (`services/database.ts`, `app/(tabs)/plan.tsx`, `components/OnboardingSetup.tsx`). El valor real es `'free'`.
-- **Deuda pendiente**: el código actual todavía guarda fechas con `toISOString()` (UTC) en:
-  - `DatabaseService.insertTransaction`
-  - `calculateEndDate`
-  - `CycleEvaluator`
-  - `OnboardingSetup`
-  - `plan.tsx`
-  - `excelHelpers.ts`
-
-  Esto incumple la regla de fechas. Corrígelo solo como tarea aparte, cuando se pida.
+- Las fechas guardadas antes de `toLocalISOString` están en UTC (`...Z`) y las nuevas llevan offset (`-05:00`). `ORDER BY` en SQL ordena el texto, así que entre registros antiguos y nuevos de la misma noche el orden puede desfasarse unas horas. Para ordenar con exactitud, hazlo en JS con `new Date(...)`.
 - El filtro por método de pago (`processTransactions`) asume que `paymentMethodId === 1` es Efectivo y que cualquier otro id es un banco. Depende del orden de los datos iniciales.
 - Los valores `rgba(...)` y `#000` que aparecen en el código solo se aceptan para fondos semitransparentes de modales y sombras. Cualquier otro color sale de `COLORS`.
 - `expo-file-system` se importa desde `expo-file-system/legacy`. La API nueva tiene otra forma.
+- **La gestión de perfiles (listar, renombrar y borrar `.db`) no funciona en Expo Go**: allí `expo-sqlite` y `expo-file-system` están aislados en carpetas distintas, y el select de perfiles sale vacío. En un development o production build funciona, porque `${documentDirectory}SQLite/` es la carpeta por defecto de `expo-sqlite`. Prueba estas funciones en un development build (`bunx expo run:android`).
+  - Ya se intentó y **no** sirve: listar `SQLite.defaultDatabaseDirectory` (`isn't readable`) ni pasar `directory` a `openDatabaseAsync` (`expo-file-system` sigue sin ver los archivos).
 - El README menciona Tailwind/NativeWind, pero el proyecto no los usa.

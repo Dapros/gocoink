@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react'
-import { View, Text, Animated } from 'react-native'
+import React, { useEffect } from 'react'
+import { View, Text, Animated, useAnimatedValue } from 'react-native'
 import Svg, { Circle } from 'react-native-svg'
 import { COLORS } from '@/constants/theme'
 
@@ -33,7 +33,7 @@ export const DonutChart = ({ income, expenses }: DonutChartProps) => {
   const visualPercentage = Math.min(spentPercentage, 100)
 
   const targetDashoffset = circumference - (visualPercentage / 100) * circumference
-  const animatedOffset = useRef(new Animated.Value(circumference)).current
+  const animatedOffset = useAnimatedValue(circumference)
 
   useEffect(() => {
     Animated.timing(animatedOffset, {

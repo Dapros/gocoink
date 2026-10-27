@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { View, Text, TouchableOpacity, Animated } from 'react-native'
+import React, { useState, useEffect } from 'react'
+import { View, Text, TouchableOpacity, Animated, useAnimatedValue } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { COLORS } from '@/constants/theme'
 import { useFilterStore } from '@/store/useFilterStore'
@@ -9,7 +9,7 @@ export const FilterBar = () => {
   const [isExpanded, setIsExpanded] = useState(false)
   const { activeType, activeTime, activeMethod, setType, setTime, setMethod } = useFilterStore()
   
-  const rotateAnim = useRef(new Animated.Value(0)).current
+  const rotateAnim = useAnimatedValue(0)
   useEffect(() => {
     Animated.timing(rotateAnim, {
       toValue: isExpanded ? 1 : 0,
